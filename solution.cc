@@ -1,6 +1,7 @@
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
+#include "mpi.h"
 
 // It would be cleaner to put seed and Gaussian_point into this class,
 // but this allows them to be called like regular C functions.
