@@ -5,26 +5,18 @@
 
 using namespace std;
 
+#define ROOT 0
+
+mt19937 gen;
+
 // It would be cleaner to put seed and Gaussian_point into this class,
 // but this allows them to be called like regular C functions.
 // Feel free to make the whole code more C++-like.
 class unit_normal {
-    mt19937 gen;
     normal_distribution<double> d{0, 1};
 
   public:
-    void seed(long int s) { gen.seed(s); }
     double sample() { return d(gen); }
-};
-
-class disc_dist {
-    mt19937 gen;
-    discrete_distribution<> d;
-
-  public:
-    disc_dist(vector<double> probs) : d(probs.begin(), probs.end()) {}
-    void seed(long int s) { gen.seed(s); }
-    int sample() { return d(gen); }
 };
 
 class normal_dist {
@@ -45,6 +37,19 @@ class normal_dist {
         return point;
     }
 };
+
+double get_distance_sq(vector<double>& p1, vector<double>& p2) {
+    double distance = 0;
+    for (int i = 0; i < p1.size(); i++) {
+        double c = p1[i] - p2[i];
+        distance += c * c;
+    }
+    return distance;
+}
+
+double get_distance(vector<double>& p1, vector<double>& p2) {
+    return sqrt(get_distance_sq(p1, p2));
+}
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -84,11 +89,11 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &k);
 
-    unit_normal un;
-    un.seed(42 + rank);
+    gen.seed(42 + rank);
 
-    disc_dist dd(probs);
-    dd.seed(42 + rank);
+    unit_normal un;
+
+    discrete_distribution dd(probs.begin(), probs.end());
 
     srand(42 + rank);
 
@@ -102,7 +107,7 @@ int main(int argc, char** argv) {
     vector<vector<double>> points;
     // TODO maybe parallelize this
     for (int i = 0; i < local_N; i++) {
-        points.push_back(dists[dd.sample()].generate(&un));
+        points.push_back(dists[dd(gen)].generate(&un));
     }
 
     // now we init the center
@@ -113,10 +118,73 @@ int main(int argc, char** argv) {
     centers.push_back(points[rand() % points.size()]);
     // throw away all non rank 0 center and make them the same as the rank 0
     // center
-    MPI_Bcast(centers[0].data(), D, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(centers[0].data(), D, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
-    cout << "center" << centers[0][0] << " " << centers[0][1] << " "
-         << centers[0][2] << endl;
+    while (centers.size() < k) {
+        // calculate the distance
+        vector<double> distances;
+        // TODO parallelize this
+        for (int i = 0; i < points.size(); i++) {
+            distances.push_back(get_distance_sq(centers[0], points[i]));
+            for (int j = 1; j < centers.size(); j++) {
+                distances[i] =
+                    min(distances[i], get_distance_sq(centers[j], points[i]));
+            }
+        }
+
+        // sum the distance together and choose a node to choose the center.
+        // TODO parallelize this
+        double dist_sum = 0;
+        for (int i = 0; i < distances.size(); i++) {
+            dist_sum += distances[i];
+        }
+
+        // cout << "Node " << rank << " calculated: " << dist_sum << endl;
+
+        // have one node choose a node
+        double* all_sum;
+        if (rank == ROOT) {
+            all_sum = (double*)malloc(k * sizeof(double));
+        }
+        MPI_Gather(&dist_sum, 1, MPI_DOUBLE, all_sum, 1, MPI_DOUBLE, ROOT,
+                   MPI_COMM_WORLD);
+
+        int next_center_node;
+        if (rank == ROOT) {
+
+            // cout << "root recieved: ";
+            // for (int i = 0; i < k; i++) {
+            //     cout << all_sum[i] << " ";
+            // }
+            // cout << endl;
+
+            discrete_distribution dd(all_sum, all_sum + k);
+            next_center_node = dd(gen);
+        }
+        MPI_Bcast(&next_center_node, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+
+        // Now choose that center
+        vector<double> center;
+        if (rank == next_center_node) {
+            discrete_distribution dd(distances.begin(), distances.end());
+            center = points[dd(gen)];
+        } else {
+            center = points[0];
+        }
+
+        // broadcast the center
+        MPI_Bcast(center.data(), D, MPI_DOUBLE, next_center_node,
+                  MPI_COMM_WORLD);
+        centers.push_back(center);
+    }
+
+    // cout << "centers:" << endl;
+    // for (int i = 0; i < centers.size(); i++) {
+    //     for (int j = 0; j < D; j++) {
+    //         cout << centers[i][j] << " ";
+    //     }
+    //     cout << endl;
+    // }
 
     MPI_Finalize();
 }
