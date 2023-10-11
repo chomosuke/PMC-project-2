@@ -1,7 +1,7 @@
+#include "mpi.h"
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
-#include "mpi.h"
 
 // It would be cleaner to put seed and Gaussian_point into this class,
 // but this allows them to be called like regular C functions.
@@ -24,8 +24,14 @@ double* Gaussian_point(double* out, unit_normal* un, int D, double* mean,
     return out;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char** argv) {
     int N, D, c; // number of points, dimensions and GMM components
+
+    MPI_Init(&argc, &argv);
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    std::cout << "Hello, world!  I am " << rank << " of " << size << std::endl;
 
     if (argc < 2) {
         fprintf(stderr, "usage: %s [input_file]\n", argv[0]);
@@ -64,4 +70,6 @@ int main(int argc, char* argv[]) {
         printf("%lf ", vec[i]);
     }
     printf("\n");
+
+    MPI_Finalize();
 }
