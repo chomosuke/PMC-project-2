@@ -37,7 +37,7 @@ class normal_dist {
         stddev = stddev_;
     }
 
-    vector<double> genarte(unit_normal* un) {
+    vector<double> generate(unit_normal* un) {
         vector<double> point;
         for (int i = 0; i < mean.size(); i++) {
             point.push_back(un->sample() * stddev + mean[i]);
@@ -79,16 +79,18 @@ int main(int argc, char** argv) {
         dists.push_back(normal_dist(mean, stddev));
     }
 
-    unit_normal un;
-    un.seed(42);
-
-    disc_dist dd(probs);
-    dd.seed(42);
-
     MPI_Init(&argc, &argv);
     int rank, k;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &k);
+
+    unit_normal un;
+    un.seed(42 + rank);
+
+    disc_dist dd(probs);
+    dd.seed(42 + rank);
+
+    srand(42 + rank);
 
     // Spread among ranks in MPI communicator
     int local_N = N / k;
@@ -98,10 +100,23 @@ int main(int argc, char** argv) {
     cout << "Generating " << local_N << " points for rank " << rank << " of "
          << k << "." << endl;
     vector<vector<double>> points;
+    // TODO maybe parallelize this
     for (int i = 0; i < local_N; i++) {
-        points.push_back(dists[dd.sample()].genarte(&un));
+        points.push_back(dists[dd.sample()].generate(&un));
     }
 
+    // now we init the center
+    // find distances in parallel
+    // one process choose center and broadcast
+    vector<vector<double>> centers;
+    // first point can be choosen from the points generated locally
+    centers.push_back(points[rand() % points.size()]);
+    // throw away all non rank 0 center and make them the same as the rank 0
+    // center
+    MPI_Bcast(centers[0].data(), D, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    cout << "center" << centers[0][0] << " " << centers[0][1] << " "
+         << centers[0][2] << endl;
 
     MPI_Finalize();
 }
