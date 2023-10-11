@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+using namespace std;
+
 // It would be cleaner to put seed and Gaussian_point into this class,
 // but this allows them to be called like regular C functions.
 // Feel free to make the whole code more C++-like.
@@ -27,22 +29,27 @@ double* Gaussian_point(double* out, unit_normal* un, int D, double* mean,
 int main(int argc, char** argv) {
     int N, D, c; // number of points, dimensions and GMM components
 
-    MPI_Init(&argc, &argv);
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    std::cout << "Hello, world!  I am " << rank << " of " << size << std::endl;
-
     if (argc < 2) {
         fprintf(stderr, "usage: %s [input_file]\n", argv[0]);
         exit(1);
     }
 
+    MPI_Init(&argc, &argv);
+    int rank, k;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &k);
+    cout << "Hello, world!  I am " << rank << " of " << k << endl;
+
     // Read number of points and dimension
     FILE* fp = fopen(argv[1], "r");
     fscanf(fp, "%d%d", &N, &D);
 
-    N /= 1; // Spread among ranks in MPI communicator
+    // Spread among ranks in MPI communicator
+    int local_N = N / k;
+    if (rank < N % k) {
+        local_N++;
+    }
+    cout << "Generating " << local_N << "points." << endl;
 
     // It would be cleaner to put this all in a class,
     // but this keeps the skeleton C-friendly.
