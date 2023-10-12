@@ -154,6 +154,93 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
     return mean_indexes;
 }
 
+double** localize_clusters(vector<int>& cluster_indices,
+                           vector<vector<double>>& points, int k, int D,
+                           int rank, int* cluster_size) {
+    int num_cluster = k;
+
+    // move each cluster to a node
+
+    // calculate size of each cluster
+    int* local_cluster_sizes = (int*)malloc(num_cluster * sizeof(int));
+    for (int i = 0; i < num_cluster; i++) {
+        local_cluster_sizes[i] = 0;
+    }
+    for (int i = 0; i < cluster_indices.size(); i++) {
+        local_cluster_sizes[cluster_indices[i]]++;
+    }
+    int* all_cluster_sizes;
+    all_cluster_sizes = (int*)malloc(num_cluster * k * sizeof(int));
+    assert(MPI_SUCCESS == MPI_Allgather(local_cluster_sizes, num_cluster,
+                                        MPI_INT, all_cluster_sizes, num_cluster,
+                                        MPI_INT, MPI_COMM_WORLD));
+    int* cluster_sizes = (int*)malloc(num_cluster * sizeof(int));
+    for (int i = 0; i < num_cluster; i++) {
+        int count = 0;
+        for (int ni = 0; ni < k; ni++) {
+            // ni is the node index
+            // i is the offset, the cluster index
+            count += all_cluster_sizes[i + ni * num_cluster];
+        }
+        cluster_sizes[i] = count;
+    }
+
+    // group local points into clusters
+    vector<double*> local_clusters_pre;
+    vector<int> filled_so_far;
+    for (int i = 0; i < num_cluster; i++) {
+        local_clusters_pre.push_back(
+            (double*)malloc(local_cluster_sizes[i] * D * sizeof(double)));
+        filled_so_far.push_back(0);
+    }
+    for (int i = 0; i < cluster_indices.size(); i++) {
+        int ci = cluster_indices[i];
+        for (int j = 0; j < D; j++) {
+            local_clusters_pre[ci][filled_so_far[ci] * D + j] = points[i][j];
+        }
+        filled_so_far[ci]++;
+    }
+
+    // transfer local points to node where the cluster belongs to.
+    double** local_cluster =
+        (double**)malloc(cluster_sizes[rank] * sizeof(double*));
+    double* local_cluster_data =
+        (double*)malloc(cluster_sizes[rank] * D * sizeof(double));
+
+    int* counts_recv = (int*)malloc(k * sizeof(int));
+    int* displacements = (int*)malloc(k * sizeof(int));
+    for (int i = 0; i < k; i++) {
+        // You want to send local_clusters_pre[i] to local_cluster_data
+        // fill counts_recv & displacements
+        for (int j = 0; j < k; j++) {
+            counts_recv[j] = all_cluster_sizes[j * k + i] * D;
+        }
+        int d = 0;
+        for (int j = 0; j < k; j++) {
+            displacements[j] = d;
+            d += counts_recv[j];
+        }
+        assert(MPI_SUCCESS ==
+               MPI_Gatherv(local_clusters_pre[i], local_cluster_sizes[i] * D,
+                           MPI_DOUBLE, local_cluster_data, counts_recv,
+                           displacements, MPI_DOUBLE, i, MPI_COMM_WORLD));
+    }
+    free(counts_recv);
+    free(displacements);
+
+    // organize local_cluster
+    for (int i = 0; i < cluster_sizes[rank]; i++) {
+        local_cluster[i] = local_cluster_data + i * D;
+    }
+
+    for (int i = 0; i < num_cluster; i++) {
+        free(local_clusters_pre[i]);
+    }
+
+    *cluster_size = cluster_sizes[rank];
+    return local_cluster;
+}
+
 int main(int argc, char** argv) {
     // argc = 2;
     if (argc < 2) {
@@ -288,10 +375,38 @@ int main(int argc, char** argv) {
         }
     }
 
-    k_means(means, points, k, D, rank);
+    vector<int> cluster_indices = k_means(means, points, k, D, rank);
+    assert(cluster_indices.size() == points.size());
 
+    cout << "means: " << endl;
+    for (int i = 0; i < centers.size(); i++) {
+        for (int j = 0; j < D; j++) {
+            cout << means[i][j] << " ";
+        }
+        cout << endl;
+    }
     free(means_data);
     free(means);
+
+    int cluster_size;
+    double** local_cluster =
+        localize_clusters(cluster_indices, points, k, D, rank, &cluster_size);
+
+    double mean[3] = {0, 0, 0};
+    for (int i = 0; i < cluster_size; i++) {
+        for (int j = 0; j < D; j++) {
+            mean[j] += local_cluster[i][j];
+        }
+    }
+    cout << "mean for rank " << rank;
+    for (int j = 0; j < D; j++) {
+        mean[j] /= cluster_size;
+        cout << " " << mean[j];
+    }
+    cout << endl;
+
+    free(local_cluster[0]);
+    free(local_cluster);
 
     assert(MPI_SUCCESS == MPI_Finalize());
 }
