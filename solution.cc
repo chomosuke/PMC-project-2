@@ -1,4 +1,5 @@
 #include "mpi.h"
+#include <assert.h>
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,6 +65,7 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
         all_sums_data = (double*)malloc(mean_count * D * k * sizeof(double));
         all_counts = (int*)malloc(mean_count * k * sizeof(int));
     }
+    cout << "hey2 " << rank << endl;
 
     bool mean_changed = true;
     vector<int> mean_indexes;
@@ -83,6 +85,7 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
             }
             mean_indexes.push_back(mi);
         }
+        cout << "hey1 " << rank << endl;
         // now calculate the sum of each cluster excluding points on other nodes
         for (int i = 0; i < mean_count; i++) {
             counts[i] = 0;
@@ -101,10 +104,12 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
         }
 
         // Send sum to ROOT to have all new means calculated
-        MPI_Gather(sums_data, mean_count * D, MPI_DOUBLE, all_sums_data,
-                   mean_count * D, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
-        MPI_Gather(counts, mean_count, MPI_DOUBLE, all_counts, mean_count,
-                   MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+        assert(MPI_SUCCESS == MPI_Gather(sums_data, mean_count * D, MPI_DOUBLE,
+                                         all_sums_data, mean_count * D,
+                                         MPI_DOUBLE, ROOT, MPI_COMM_WORLD));
+        assert(MPI_SUCCESS == MPI_Gather(counts, mean_count, MPI_INT,
+                                         all_counts, mean_count, MPI_INT,
+                                         ROOT, MPI_COMM_WORLD));
         // calculate the new mean
         mean_changed = false;
         if (rank == ROOT) {
@@ -116,7 +121,7 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
                     count += all_counts[i + ni * mean_count];
                 }
                 for (int j = 0; j < D; j++) {
-                    double sum;
+                    double sum = 0;
                     for (int ni = 0; ni < k; ni++) {
                         // i * D + j is the offset
                         // ni * cluster_count * D is the node stride
@@ -132,14 +137,16 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
             }
         }
 
-        if (rank == ROOT) {
-            free(all_sums_data);
-            free(all_counts);
-        }
-
         // Broadcast new means
-        MPI_Bcast(means[0], mean_count * D, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
-        MPI_Bcast(&mean_changed, 1, MPI_C_BOOL, ROOT, MPI_COMM_WORLD);
+        assert(MPI_SUCCESS == MPI_Bcast(means[0], mean_count * D, MPI_DOUBLE,
+                                        ROOT, MPI_COMM_WORLD));
+        assert(MPI_SUCCESS ==
+               MPI_Bcast(&mean_changed, 1, MPI_C_BOOL, ROOT, MPI_COMM_WORLD));
+    }
+
+    if (rank == ROOT) {
+        free(all_sums_data);
+        free(all_counts);
     }
 
     free(sums_data);
@@ -150,6 +157,7 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
 }
 
 int main(int argc, char** argv) {
+    // argc = 2;
     if (argc < 2) {
         fprintf(stderr, "usage: %s [input_file]\n", argv[0]);
         exit(1);
@@ -157,6 +165,7 @@ int main(int argc, char** argv) {
 
     // Read number of points and dimension
     FILE* fp = fopen(argv[1], "r");
+    // FILE* fp = fopen("input.txt", "r");
     int N, D; // number of points and dimensions
     fscanf(fp, "%d%d", &N, &D);
 
@@ -182,10 +191,10 @@ int main(int argc, char** argv) {
         dists.push_back(normal_dist(mean, stddev));
     }
 
-    MPI_Init(&argc, &argv);
+    assert(MPI_SUCCESS == MPI_Init(&argc, &argv));
     int rank, k;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &k);
+    assert(MPI_SUCCESS == MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+    assert(MPI_SUCCESS == MPI_Comm_size(MPI_COMM_WORLD, &k));
 
     gen.seed(42 + rank);
 
@@ -216,7 +225,8 @@ int main(int argc, char** argv) {
     centers.push_back(points[rand() % points.size()]);
     // throw away all non rank 0 center and make them the same as the rank 0
     // center
-    MPI_Bcast(centers[0].data(), D, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+    assert(MPI_SUCCESS ==
+           MPI_Bcast(centers[0].data(), D, MPI_DOUBLE, ROOT, MPI_COMM_WORLD));
 
     while (centers.size() < k) {
         // calculate the distance
@@ -246,8 +256,8 @@ int main(int argc, char** argv) {
         if (rank == ROOT) {
             all_sum = (double*)malloc(k * sizeof(double));
         }
-        MPI_Gather(&dist_sum, 1, MPI_DOUBLE, all_sum, 1, MPI_DOUBLE, ROOT,
-                   MPI_COMM_WORLD);
+        assert(MPI_SUCCESS == MPI_Gather(&dist_sum, 1, MPI_DOUBLE, all_sum, 1,
+                                         MPI_DOUBLE, ROOT, MPI_COMM_WORLD));
 
         int next_center_node;
         if (rank == ROOT) {
@@ -262,7 +272,8 @@ int main(int argc, char** argv) {
             next_center_node = dd(gen);
             free(all_sum);
         }
-        MPI_Bcast(&next_center_node, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+        assert(MPI_SUCCESS ==
+               MPI_Bcast(&next_center_node, 1, MPI_INT, ROOT, MPI_COMM_WORLD));
 
         // Now choose that center
         vector<double> center;
@@ -274,8 +285,8 @@ int main(int argc, char** argv) {
         }
 
         // broadcast the center
-        MPI_Bcast(center.data(), D, MPI_DOUBLE, next_center_node,
-                  MPI_COMM_WORLD);
+        assert(MPI_SUCCESS == MPI_Bcast(center.data(), D, MPI_DOUBLE,
+                                        next_center_node, MPI_COMM_WORLD));
         centers.push_back(center);
     }
 
@@ -298,5 +309,5 @@ int main(int argc, char** argv) {
 
     k_means(means, points, k, D, rank);
 
-    MPI_Finalize();
+    assert(MPI_SUCCESS == MPI_Finalize());
 }
