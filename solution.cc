@@ -38,17 +38,115 @@ class normal_dist {
     }
 };
 
-double get_distance_sq(vector<double>& p1, vector<double>& p2) {
+double get_distance_sq(double* p1, double* p2, int D) {
     double distance = 0;
-    for (int i = 0; i < p1.size(); i++) {
+    for (int i = 0; i < D; i++) {
         double c = p1[i] - p2[i];
         distance += c * c;
     }
     return distance;
 }
 
-double get_distance(vector<double>& p1, vector<double>& p2) {
-    return sqrt(get_distance_sq(p1, p2));
+double get_distance(double* p1, double* p2, int D) {
+    return sqrt(get_distance_sq(p1, p2, D));
+}
+
+vector<int> k_means(double** means, vector<vector<double>>& points, int k,
+                    int D, int rank) {
+    int mean_count = k;
+
+    double* sums_data = (double*)malloc(mean_count * D * sizeof(double));
+    double** sums = (double**)malloc(mean_count * sizeof(double*));
+    int* counts = (int*)malloc(mean_count * sizeof(int));
+    double* all_sums_data;
+    int* all_counts;
+    if (rank == ROOT) {
+        all_sums_data = (double*)malloc(mean_count * D * k * sizeof(double));
+        all_counts = (int*)malloc(mean_count * k * sizeof(int));
+    }
+
+    bool mean_changed = true;
+    vector<int> mean_indexes;
+    while (mean_changed) {
+        // Every node assign its own point to a center
+        // TODO parallelize
+        mean_indexes.clear();
+        for (int i = 0; i < points.size(); i++) {
+            int mi = 0;
+            double d = get_distance_sq(means[mi], points[i].data(), D);
+            for (int j = 1; j < mean_count; j++) {
+                double nd = get_distance_sq(means[j], points[i].data(), D);
+                if (nd < d) {
+                    d = nd;
+                    mi = j;
+                }
+            }
+            mean_indexes.push_back(mi);
+        }
+        // now calculate the sum of each cluster excluding points on other nodes
+        for (int i = 0; i < mean_count; i++) {
+            counts[i] = 0;
+            sums[i] = sums_data + i * D;
+            for (int j = 0; j < D; j++) {
+                sums[i][j] = 0;
+            }
+        }
+        // TODO parallelize
+        for (int i = 0; i < points.size(); i++) {
+            int ci = mean_indexes[i];
+            for (int j = 0; j < D; j++) {
+                sums[ci][j] += points[i][j];
+            }
+            counts[ci]++;
+        }
+
+        // Send sum to ROOT to have all new means calculated
+        MPI_Gather(sums_data, mean_count * D, MPI_DOUBLE, all_sums_data,
+                   mean_count * D, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+        MPI_Gather(counts, mean_count, MPI_DOUBLE, all_counts, mean_count,
+                   MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+        // calculate the new mean
+        mean_changed = false;
+        if (rank == ROOT) {
+            for (int i = 0; i < mean_count; i++) {
+                int count = 0;
+                for (int ni = 0; ni < k; ni++) {
+                    // ni is the node index
+                    // i is the offset, the cluster index
+                    count += all_counts[i + ni * mean_count];
+                }
+                for (int j = 0; j < D; j++) {
+                    double sum;
+                    for (int ni = 0; ni < k; ni++) {
+                        // i * D + j is the offset
+                        // ni * cluster_count * D is the node stride
+                        int stride = mean_count * D;
+                        sum += all_sums_data[i * D + j + ni * stride];
+                    }
+                    double m = sum / count;
+                    if (means[i][j] != m) {
+                        mean_changed = true;
+                    }
+                    means[i][j] = m;
+                }
+            }
+        }
+
+        if (rank == ROOT) {
+            free(all_sums_data);
+            free(all_counts);
+        }
+
+        // Broadcast new means
+        MPI_Bcast(means[0], mean_count * D, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
+        MPI_Bcast(&mean_changed, 1, MPI_C_BOOL, ROOT, MPI_COMM_WORLD);
+    }
+
+    free(sums_data);
+    free(sums);
+    free(counts);
+
+    return mean_indexes;
 }
 
 int main(int argc, char** argv) {
@@ -125,10 +223,12 @@ int main(int argc, char** argv) {
         vector<double> distances;
         // TODO parallelize this
         for (int i = 0; i < points.size(); i++) {
-            distances.push_back(get_distance_sq(centers[0], points[i]));
+            distances.push_back(
+                get_distance_sq(centers[0].data(), points[i].data(), D));
             for (int j = 1; j < centers.size(); j++) {
                 distances[i] =
-                    min(distances[i], get_distance_sq(centers[j], points[i]));
+                    min(distances[i], get_distance_sq(centers[j].data(),
+                                                      points[i].data(), D));
             }
         }
 
@@ -160,6 +260,7 @@ int main(int argc, char** argv) {
 
             discrete_distribution dd(all_sum, all_sum + k);
             next_center_node = dd(gen);
+            free(all_sum);
         }
         MPI_Bcast(&next_center_node, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 
@@ -185,6 +286,17 @@ int main(int argc, char** argv) {
     //     }
     //     cout << endl;
     // }
+
+    double* means_data = (double*)malloc(centers.size() * D * sizeof(double));
+    double** means = (double**)malloc(centers.size() * sizeof(double*));
+    for (int i = 0; i < centers.size(); i++) {
+        means[i] = means_data + i * D;
+        for (int j = 0; j < D; j++) {
+            means[i][j] = centers[i][j];
+        }
+    }
+
+    k_means(means, points, k, D, rank);
 
     MPI_Finalize();
 }
