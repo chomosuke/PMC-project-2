@@ -1,5 +1,7 @@
 #include "mpi.h"
 #include <assert.h>
+#include <fstream>
+#include <iostream>
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
@@ -815,8 +817,21 @@ int main(int argc, char** argv) {
     cout << rank << " with size " << local_cluster_size << endl;
 
     double** velocities = init_points(local_cluster_size, D);
+
     for (int i = 0; i < 100; i++) {
         simulate(local_cluster_size, local_cluster, velocities, k, D, rank);
+
+        char fname[20];
+        sprintf(fname, "points/%d.csv", i);
+        ofstream PointsFile(fname);
+        for (int j = 0; j < local_cluster_size; j++) {
+            PointsFile << local_cluster[j][0];
+            for (int l = 1; l < D; l++) {
+                PointsFile << "," << local_cluster[j];
+            }
+            PointsFile << endl;
+        }
+        PointsFile.close();
     }
 
     free(velocities[0]);
