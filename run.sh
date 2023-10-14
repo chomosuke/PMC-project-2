@@ -2,4 +2,4 @@
 make solution
 rm -r points/data
 mkdir points/data
-mpirun -np 6 solution input.txt
+mpirun -np 8 solution input.txt

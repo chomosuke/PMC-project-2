@@ -68,8 +68,7 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
                     int D, int rank) {
     int mean_count = k;
 
-    double* sums_data = (double*)malloc(mean_count * D * sizeof(double));
-    double** sums = (double**)malloc(mean_count * sizeof(double*));
+    double** sums = init_points(mean_count, D);
     int* counts = (int*)malloc(mean_count * sizeof(int));
     double* all_sums_data;
     int* all_counts;
@@ -98,10 +97,7 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
         }
         // now calculate the sum of each cluster excluding points on other nodes
         memset(counts, 0, mean_count * sizeof(int));
-        memset(sums_data, 0, mean_count * D * sizeof(double));
-        for (int i = 0; i < mean_count; i++) {
-            sums[i] = sums_data + i * D;
-        }
+        memset(sums[0], 0, mean_count * D * sizeof(double));
         // TODO parallelize
         for (int i = 0; i < points.size(); i++) {
             int ci = mean_indexes[i];
@@ -112,7 +108,7 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
         }
 
         // Send sum to ROOT to have all new means calculated
-        assert(MPI_SUCCESS == MPI_Gather(sums_data, mean_count * D, MPI_DOUBLE,
+        assert(MPI_SUCCESS == MPI_Gather(sums[0], mean_count * D, MPI_DOUBLE,
                                          all_sums_data, mean_count * D,
                                          MPI_DOUBLE, ROOT, MPI_COMM_WORLD));
         assert(MPI_SUCCESS == MPI_Gather(counts, mean_count, MPI_INT,
@@ -157,11 +153,131 @@ vector<int> k_means(double** means, vector<vector<double>>& points, int k,
         free(all_counts);
     }
 
-    free(sums_data);
+    free(sums[0]);
     free(sums);
     free(counts);
 
     return mean_indexes;
+}
+
+uint8_t* alltoallv(uint8_t* buf_send, int* counts_send,
+                   /*out*/ int* counts_recv, int k) {
+    assert(MPI_SUCCESS == MPI_Alltoall(counts_send, 1, MPI_INT, counts_recv, 1,
+                                       MPI_INT, MPI_COMM_WORLD));
+    int* displacements_send = (int*)malloc(k * sizeof(int));
+    int total_send = 0;
+    for (int i = 0; i < k; i++) {
+        displacements_send[i] = total_send;
+        total_send += counts_send[i];
+    }
+
+    int total_recv = 0;
+    int* displacements_recv = (int*)malloc(k * sizeof(int));
+    for (int i = 0; i < k; i++) {
+        displacements_recv[i] = total_recv;
+        total_recv += counts_recv[i];
+    }
+    uint8_t* buf_recv = (uint8_t*)malloc(total_recv * sizeof(uint8_t));
+    assert(MPI_SUCCESS ==
+           MPI_Alltoallv(buf_send, counts_send, displacements_send, MPI_UINT8_T,
+                         buf_recv, counts_recv, displacements_recv, MPI_UINT8_T,
+                         MPI_COMM_WORLD));
+    free(displacements_send);
+    free(displacements_recv);
+    return buf_recv;
+}
+
+void re_localize(int local_cluster_size, double** local_cluster,
+                 double** velocities, int k, int D, int* new_size,
+                 double*** local_cluster_out, double*** velocities_out) {
+    // recalculate the mean of the local cluster
+    double* mean = (double*)malloc(D * sizeof(double));
+    memset(mean, 0, D * sizeof(double));
+    for (int i = 0; i < local_cluster_size; i++) {
+        for (int j = 0; j < D; j++) {
+            mean[j] += local_cluster[i][j];
+        }
+    }
+    for (int i = 0; i < D; i++) {
+        mean[i] /= local_cluster_size;
+    }
+
+    double** means = init_points(k, D);
+    assert(MPI_SUCCESS == MPI_Allgather(mean, D, MPI_DOUBLE, means[0], D,
+                                        MPI_DOUBLE, MPI_COMM_WORLD));
+    // Re assign clusters
+    vector<vector<double*>> new_clusters;
+    vector<vector<double*>> new_cluster_velocities;
+    // Assign
+    for (int i = 0; i < k; i++) {
+        vector<double*> new_cluster;
+        new_clusters.push_back(new_cluster);
+        vector<double*> new_cluster_velocity;
+        new_cluster_velocities.push_back(new_cluster_velocity);
+    }
+    for (int i = 0; i < local_cluster_size; i++) {
+        int mi = 0;
+        double d = get_distance_sq(means[mi], local_cluster[i], D);
+        for (int j = 1; j < k; j++) {
+            double nd = get_distance_sq(means[j], local_cluster[i], D);
+            if (nd < d) {
+                d = nd;
+                mi = j;
+            }
+        }
+        new_clusters[mi].push_back(local_cluster[i]);
+        new_cluster_velocities[mi].push_back(velocities[i]);
+    }
+
+    // Format into bytes to be sent
+    double** send_cluster_points = init_points(local_cluster_size, D);
+    double** send_cluster_velocies = init_points(local_cluster_size, D);
+    int nci = 0;
+    int ncj = 0;
+    for (int i = 0; i < local_cluster_size; i++) {
+        while (ncj >= new_clusters[nci].size()) {
+            nci++;
+            ncj = 0;
+        }
+        memcpy(send_cluster_points[i], new_clusters[nci][ncj],
+               D * sizeof(double));
+        memcpy(send_cluster_velocies[i], new_cluster_velocities[nci][ncj],
+               D * sizeof(double));
+        ncj++;
+    }
+
+    // move clusters
+    int* counts_send = (int*)malloc(k * sizeof(int));
+    for (int i = 0; i < k; i++) {
+        counts_send[i] = new_clusters[i].size() * D * sizeof(double);
+    }
+    int* counts_recv = (int*)malloc(k * sizeof(int));
+    double* new_cluster_points_data = (double*)alltoallv(
+        (uint8_t*)send_cluster_points[0], counts_send, counts_recv, k);
+    double* new_cluster_velocities_data = (double*)alltoallv(
+        (uint8_t*)send_cluster_velocies[0], counts_send, counts_recv, k);
+    *new_size = 0;
+    for (int i = 0; i < k; i++) {
+        *new_size += counts_recv[i] / D / sizeof(double);
+    }
+
+    free(counts_send);
+    free(counts_recv);
+
+    free(means[0]);
+    free(mean);
+    free(means);
+
+    double** new_cluster_points = (double**)malloc(*new_size * sizeof(double*));
+    double** new_cluster_point_velocities =
+        (double**)malloc(*new_size * sizeof(double*));
+    for (int i = 0; i < *new_size; i++) {
+        new_cluster_points[i] = new_cluster_points_data + i * D;
+        new_cluster_point_velocities[i] = new_cluster_velocities_data + i * D;
+    }
+
+    *local_cluster_out = new_cluster_points;
+    *velocities_out = new_cluster_point_velocities;
 }
 
 double** localize_clusters(vector<int>& cluster_indices,
@@ -260,7 +376,7 @@ double get_distance_to_hyperplane(double* hyperplane, double* point, int D) {
     for (int i = 0; i < D; i++) {
         d += hyperplane[D] * hyperplane[D];
     }
-    return n / sqrt(d);
+    return abs(n / sqrt(d));
 }
 
 typedef struct node {
@@ -454,8 +570,8 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
     return root;
 }
 
-// #define THETA 0.1
-#define THETA 0
+#define THETA 0.1
+// #define THETA 0
 node* get_partial(node* full, double* hyperplane, int D) {
     node* partial = (node*)malloc(sizeof(node));
 
@@ -487,33 +603,6 @@ node* get_partial(node* full, double* hyperplane, int D) {
     return partial;
 }
 
-uint8_t* alltoallv(uint8_t* buf_send, int* counts_send,
-                   /*out*/ int* counts_recv, int k) {
-    assert(MPI_SUCCESS == MPI_Alltoall(counts_send, 1, MPI_INT, counts_recv, 1,
-                                       MPI_INT, MPI_COMM_WORLD));
-    int* displacements_send = (int*)malloc(k * sizeof(int));
-    int total_send = 0;
-    for (int i = 0; i < k; i++) {
-        displacements_send[i] = total_send;
-        total_send += counts_send[i];
-    }
-
-    int total_recv = 0;
-    int* displacements_recv = (int*)malloc(k * sizeof(int));
-    for (int i = 0; i < k; i++) {
-        displacements_recv[i] = total_recv;
-        total_recv += counts_recv[i];
-    }
-    uint8_t* buf_recv = (uint8_t*)malloc(total_recv * sizeof(uint8_t));
-    assert(MPI_SUCCESS ==
-           MPI_Alltoallv(buf_send, counts_send, displacements_send, MPI_UINT8_T,
-                         buf_recv, counts_recv, displacements_recv, MPI_UINT8_T,
-                         MPI_COMM_WORLD));
-    free(displacements_send);
-    free(displacements_recv);
-    return buf_recv;
-}
-
 #define G 9.8
 vector<double> get_acc(double* point, node* root, int D) {
     vector<double> acc;
@@ -526,17 +615,12 @@ vector<double> get_acc(double* point, node* root, int D) {
         }
     }
     if (abs(root->b2[0] - root->b1[0]) / d < THETA || root->num_children == 0) {
-        // cout << "Acc: " << d << endl;
         // use this center of mass
         for (int i = 0; i < D; i++) {
             // TODO verify this
             acc.push_back(G * root->mass *
                           (root->center_of_mass[i] - point[i]) / d / d / d);
-            // cout << root->mass << endl;
-            // cout << root->center_of_mass[i] << endl;
-            // cout << point[i] << endl;
         }
-        // cout << endl;
     } else {
         for (int i = 0; i < D; i++) {
             acc.push_back(0);
@@ -565,7 +649,7 @@ vector<double> get_acc(double* point, vector<node*> trees, int D) {
     return acc;
 }
 
-#define DT 0.00001
+#define DT 0.001
 void simulate(int local_cluster_size, double** local_cluster,
               double** velocities, int k, int D, int rank) {
     // We want to reduce the communication overhead.
@@ -759,6 +843,8 @@ void simulate(int local_cluster_size, double** local_cluster,
     free(closest_points);
 }
 
+double get_variance() {}
+
 int main(int argc, char** argv) {
     argc = 2;
     if (argc < 2) {
@@ -889,10 +975,8 @@ int main(int argc, char** argv) {
         centers.push_back(center);
     }
 
-    double* means_data = (double*)malloc(centers.size() * D * sizeof(double));
-    double** means = (double**)malloc(centers.size() * sizeof(double*));
+    double** means = init_points(centers.size(), D);
     for (int i = 0; i < centers.size(); i++) {
-        means[i] = means_data + i * D;
         for (int j = 0; j < D; j++) {
             means[i][j] = centers[i][j];
         }
@@ -901,7 +985,7 @@ int main(int argc, char** argv) {
     vector<int> cluster_indices = k_means(means, points, k, D, rank);
     assert(cluster_indices.size() == points.size());
 
-    free(means_data);
+    free(means[0]);
     free(means);
 
     int local_cluster_size;
@@ -919,7 +1003,8 @@ int main(int argc, char** argv) {
 
         if (i % (iter_count / 100) == 0) {
             char fname[20];
-            sprintf(fname, "points/data/%d-%d.csv", i / (iter_count / 100), rank);
+            sprintf(fname, "points/data/%d-%d.csv", i / (iter_count / 100),
+                    rank);
             ofstream PointsFile(fname);
             for (int j = 0; j < local_cluster_size; j++) {
                 PointsFile << local_cluster[j][0];
@@ -929,6 +1014,20 @@ int main(int argc, char** argv) {
                 PointsFile << endl;
             }
             PointsFile.close();
+        }
+
+        if (i < iter_count - 1) {
+            int new_size = 0;
+            double **new_cluster, **new_velocities;
+            re_localize(local_cluster_size, local_cluster, velocities, k, D,
+                        &new_size, &new_cluster, &new_velocities);
+            free(local_cluster[0]);
+            free(local_cluster);
+            free(velocities[0]);
+            free(velocities);
+            local_cluster = new_cluster;
+            local_cluster_size = new_size;
+            velocities = new_velocities;
         }
     }
 

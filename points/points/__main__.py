@@ -17,6 +17,7 @@ def get_points(i):
         df = pd.read_csv("data/" + str(i) + "-" + str(j) + ".csv", header=None)
         x.extend(df[0].values.tolist())
         y.extend(df[1].values.tolist())
+    print(len(x))
     return (x, y)
 
 
