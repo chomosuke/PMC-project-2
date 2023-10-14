@@ -5,6 +5,7 @@
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iomanip>
 
 using namespace std;
 
@@ -430,7 +431,8 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
 
             permutation++;
         }
-        assert(total_size == points.size());
+        assert (total_size == points.size());
+
         root->num_children = children.size();
         root->children = (node**)malloc(root->num_children * sizeof(node*));
         memcpy(root->children, children.data(),
@@ -452,7 +454,7 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
     return root;
 }
 
-#define THETA 0.001
+#define THETA 0
 node* get_partial(node* full, double* hyperplane, int D) {
     node* partial = (node*)malloc(sizeof(node));
 
@@ -622,8 +624,9 @@ void simulate(int local_cluster_size, double** local_cluster,
     }
     for (int j = 0; j < D; j++) {
         double cur_diff = b2[j] - b1[j];
-        b2[j] += (max_diff - cur_diff) / 2;
-        b1[j] = b2[j] - max_diff;
+        double expand = (max_diff - cur_diff) / 2;
+        b2[j] += expand;
+        b1[j] -= expand;
     }
     node* all_root = construct(points, b1, b2, D);
     // TODO remove

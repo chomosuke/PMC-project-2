@@ -5,8 +5,9 @@ import pandas as pd
 import matplotlib.animation as animation
 
 fig, ax = plt.subplots()
-ax.set_xlim([-10, 10])
-ax.set_ylim([-10, 10])
+size = 4
+ax.set_xlim([-size, size])
+ax.set_ylim([-size, size])
 
 
 def get_points(i):
