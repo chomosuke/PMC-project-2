@@ -5,14 +5,15 @@ import pandas as pd
 import matplotlib.animation as animation
 
 fig, ax = plt.subplots()
-# ax.set_xlim([0, 10])
+ax.set_xlim([-10, 10])
+ax.set_ylim([-10, 10])
 
 
 def get_points(i):
     x = []
     y = []
     for j in range(6):
-        df = pd.read_csv("data/" + str(j) + "-" + str(i) + ".csv", header=None)
+        df = pd.read_csv("data/" + str(i) + "-" + str(j) + ".csv", header=None)
         x.extend(df[0].values.tolist())
         y.extend(df[1].values.tolist())
     return (x, y)

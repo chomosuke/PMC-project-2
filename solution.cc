@@ -267,6 +267,7 @@ typedef struct node {
     int mass;
     double* b1;
     // b2 should be larger
+    // b1 inclusive, b2 exclusive
     double* b2;
     int num_children;
     struct node** children;
@@ -310,7 +311,59 @@ node* decode(uint8_t* bytes, int* size_read, int D) {
     }
     return root;
 }
-// TODO test encode and decode
+
+node* copy_node(node* root, int D) {
+    node* n_root = (node*)malloc(sizeof(node));
+    n_root->center_of_mass = (double*)malloc(D * sizeof(double));
+    memcpy(n_root->center_of_mass, root->center_of_mass, D * sizeof(double));
+    n_root->b1 = (double*)malloc(D * sizeof(double));
+    memcpy(n_root->b1, root->b1, D * sizeof(double));
+    n_root->b2 = (double*)malloc(D * sizeof(double));
+    memcpy(n_root->b2, root->b2, D * sizeof(double));
+    n_root->mass = root->mass;
+    n_root->num_children = root->num_children;
+
+    n_root->children = (node**)malloc(n_root->num_children * sizeof(node*));
+    for (int i = 0; i < n_root->num_children; i++) {
+        n_root->children[i] = copy_node(root->children[i], D);
+    }
+    return n_root;
+}
+
+bool double_eq(double d1, double d2) {
+    return d1 == d2 || (isnan(d1) && isnan(d2));
+}
+
+bool node_equals(node* n1, node* n2, int D) {
+    for (int i = 0; i < D; i++) {
+        if (!double_eq(n1->center_of_mass[i], n2->center_of_mass[i]) ||
+            !double_eq(n1->b1[i], n2->b1[i]) ||
+            !double_eq(n1->b2[i], n2->b2[i])) {
+            cout << "com or b1 or b2" << endl;
+            return false;
+        }
+    }
+    if (n1->num_children != n2->num_children) {
+        cout << "num_children" << endl;
+        return false;
+    }
+    for (int i = 0; i < n1->num_children; i++) {
+        if (!node_equals(n1->children[i], n2->children[i], D)) {
+            cout << "child number " << i << endl;
+            return false;
+        }
+    }
+    return n1->mass == n2->mass;
+}
+
+void test(node* root, int D) {
+    node* c = copy_node(root, D);
+    vector<uint8_t> bytes;
+    encode(c, bytes, D);
+    int size_read = 0;
+    node* n = decode(bytes.data(), &size_read, D);
+    assert(node_equals(n, root, D));
+}
 
 node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
                 int D) {
@@ -320,13 +373,30 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
     memcpy(root->b1, b1.data(), D * sizeof(double));
     root->b2 = (double*)malloc(D * sizeof(double));
     memcpy(root->b2, b2.data(), D * sizeof(double));
-    if (points.size() == 1) {
+    assert(points.size() > 0);
+
+    // Check if all points are equal, if yes then don't go further
+    bool all_equal = true;
+    for (int i = 1; i < points.size(); i++) {
+        for (int j = 0; j < D; j++) {
+            if (!double_eq(points[i - 1][j], points[i][j])) {
+                all_equal = false;
+                break;
+            }
+        }
+        if (!all_equal) {
+            break;
+        }
+    }
+
+    if (all_equal) {
         root->num_children = 0;
-        root->mass = 1;
+        root->mass = points.size();
         memcpy(root->center_of_mass, points[0], D * sizeof(double));
     } else {
         vector<node*> children;
         unsigned long long permutation = 0;
+        int total_size = 0;
         while (permutation < pow(2, D)) {
             // construct b1 & b2
             vector<double> nb1, nb2;
@@ -343,6 +413,7 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
             for (int i = 0; i < points.size(); i++) {
                 bool within = true;
                 for (int j = 0; j < D; j++) {
+                    assert(!(nb1[j] >= nb2[j]));
                     if (points[i][j] < nb1[j] || points[i][j] >= nb2[j]) {
                         within = false;
                         break;
@@ -355,15 +426,17 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
             if (npoints.size() > 0) {
                 children.push_back(construct(npoints, nb1, nb2, D));
             }
+            total_size += npoints.size();
 
             permutation++;
         }
+        assert(total_size == points.size());
         root->num_children = children.size();
         root->children = (node**)malloc(root->num_children * sizeof(node*));
         memcpy(root->children, children.data(),
                root->num_children * sizeof(node*));
 
-        root->center_of_mass = (double*)malloc(D * sizeof(double));
+        assert(root->num_children > 0);
         memset(root->center_of_mass, 0, D * sizeof(double));
         root->mass = 0;
         for (int i = 0; i < root->num_children; i++) {
@@ -379,7 +452,7 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
     return root;
 }
 
-#define THETA 0.1
+#define THETA 0.001
 node* get_partial(node* full, double* hyperplane, int D) {
     node* partial = (node*)malloc(sizeof(node));
 
@@ -442,13 +515,25 @@ uint8_t* alltoallv(uint8_t* buf_send, int* counts_send,
 vector<double> get_acc(double* point, node* root, int D) {
     vector<double> acc;
     double d = get_distance(point, root->center_of_mass, D);
-    if (abs(root->b2[0] - root->b1[0]) / d < THETA) {
+    if (d == 0) {
+        assert(root->mass == 1);
+        // this is itself
+        for (int i = 0; i < D; i++) {
+            acc.push_back(0);
+        }
+    }
+    if (abs(root->b2[0] - root->b1[0]) / d < THETA || root->num_children == 0) {
+        // cout << "Acc: " << d << endl;
         // use this center of mass
         for (int i = 0; i < D; i++) {
             // TODO verify this
             acc.push_back(G * root->mass *
                           (root->center_of_mass[i] - point[i]) / d / d / d);
+            // cout << root->mass << endl;
+            // cout << root->center_of_mass[i] << endl;
+            // cout << point[i] << endl;
         }
+        // cout << endl;
     } else {
         for (int i = 0; i < D; i++) {
             acc.push_back(0);
@@ -477,7 +562,7 @@ vector<double> get_acc(double* point, vector<node*> trees, int D) {
     return acc;
 }
 
-#define DT 0.1
+#define DT 0.001
 void simulate(int local_cluster_size, double** local_cluster,
               double** velocities, int k, int D, int rank) {
     // We want to reduce the communication overhead.
@@ -521,13 +606,14 @@ void simulate(int local_cluster_size, double** local_cluster,
     vector<double> b2;
     for (int j = 0; j < D; j++) {
         b1.push_back(local_cluster[0][j]);
-        b2.push_back(local_cluster[0][j]);
+        b2.push_back(local_cluster[0][j] +
+                     0.001); // + 0.001 to make b2 exclusive
     }
     for (int i = 0; i < local_cluster_size; i++) {
         points.push_back(local_cluster[i]);
         for (int j = 0; j < D; j++) {
             b1[j] = min(b1[j], local_cluster[i][j]);
-            b2[j] = max(b2[j], local_cluster[i][j]);
+            b2[j] = max(b2[j], local_cluster[i][j] + 0.001);
         }
     }
     double max_diff = 0;
@@ -540,6 +626,8 @@ void simulate(int local_cluster_size, double** local_cluster,
         b1[j] = b2[j] - max_diff;
     }
     node* all_root = construct(points, b1, b2, D);
+    // TODO remove
+    test(all_root, D);
 
     double** means = init_points(num_means, D);
     assert(MPI_SUCCESS == MPI_Allgather(all_root->center_of_mass, D, MPI_DOUBLE,
@@ -617,6 +705,8 @@ void simulate(int local_cluster_size, double** local_cluster,
         }
         node* partial = get_partial(all_root, hyperplanes[i], D);
         partials.push_back(partial);
+        // TODO remove
+        test(partial, D);
     }
 
     // Send the partial tree to each node
@@ -648,7 +738,7 @@ void simulate(int local_cluster_size, double** local_cluster,
 
     // Move
     // TODO parallelize
-    for (int i = 0; i < k; i++) {
+    for (int i = 0; i < local_cluster_size; i++) {
         double* point = local_cluster[i];
         vector<double> acc = get_acc(point, trees, D);
         for (int j = 0; j < D; j++) {
@@ -666,15 +756,15 @@ void simulate(int local_cluster_size, double** local_cluster,
 }
 
 int main(int argc, char** argv) {
-    // argc = 2;
+    argc = 2;
     if (argc < 2) {
         fprintf(stderr, "usage: %s [input_file]\n", argv[0]);
         exit(1);
     }
 
     // Read number of points and dimension
-    FILE* fp = fopen(argv[1], "r");
-    // FILE* fp = fopen("input.txt", "r");
+    // FILE* fp = fopen(argv[1], "r");
+    FILE* fp = fopen("input.txt", "r");
     int N, D; // number of points and dimensions
     fscanf(fp, "%d%d", &N, &D);
 
@@ -817,17 +907,18 @@ int main(int argc, char** argv) {
     cout << rank << " with size " << local_cluster_size << endl;
 
     double** velocities = init_points(local_cluster_size, D);
+    memset(velocities[0], 0, local_cluster_size * D * sizeof(double));
 
     for (int i = 0; i < 100; i++) {
         simulate(local_cluster_size, local_cluster, velocities, k, D, rank);
 
         char fname[20];
-        sprintf(fname, "points/%d.csv", i);
+        sprintf(fname, "points/data/%d-%d.csv", i, rank);
         ofstream PointsFile(fname);
         for (int j = 0; j < local_cluster_size; j++) {
             PointsFile << local_cluster[j][0];
             for (int l = 1; l < D; l++) {
-                PointsFile << "," << local_cluster[j];
+                PointsFile << "," << local_cluster[j][l];
             }
             PointsFile << endl;
         }
