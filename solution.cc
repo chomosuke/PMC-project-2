@@ -1,11 +1,11 @@
 #include "mpi.h"
 #include <assert.h>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
-#include <iomanip>
 
 using namespace std;
 
@@ -431,7 +431,7 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
 
             permutation++;
         }
-        assert (total_size == points.size());
+        assert(total_size == points.size());
 
         root->num_children = children.size();
         root->children = (node**)malloc(root->num_children * sizeof(node*));
@@ -454,6 +454,7 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
     return root;
 }
 
+// #define THETA 0.1
 #define THETA 0
 node* get_partial(node* full, double* hyperplane, int D) {
     node* partial = (node*)malloc(sizeof(node));
@@ -564,7 +565,7 @@ vector<double> get_acc(double* point, vector<node*> trees, int D) {
     return acc;
 }
 
-#define DT 0.001
+#define DT 0.00001
 void simulate(int local_cluster_size, double** local_cluster,
               double** velocities, int k, int D, int rank) {
     // We want to reduce the communication overhead.
@@ -912,20 +913,23 @@ int main(int argc, char** argv) {
     double** velocities = init_points(local_cluster_size, D);
     memset(velocities[0], 0, local_cluster_size * D * sizeof(double));
 
-    for (int i = 0; i < 100; i++) {
+    int iter_count = 0.1 / DT;
+    for (int i = 0; i < iter_count; i++) {
         simulate(local_cluster_size, local_cluster, velocities, k, D, rank);
 
-        char fname[20];
-        sprintf(fname, "points/data/%d-%d.csv", i, rank);
-        ofstream PointsFile(fname);
-        for (int j = 0; j < local_cluster_size; j++) {
-            PointsFile << local_cluster[j][0];
-            for (int l = 1; l < D; l++) {
-                PointsFile << "," << local_cluster[j][l];
+        if (i % (iter_count / 100) == 0) {
+            char fname[20];
+            sprintf(fname, "points/data/%d-%d.csv", i / (iter_count / 100), rank);
+            ofstream PointsFile(fname);
+            for (int j = 0; j < local_cluster_size; j++) {
+                PointsFile << local_cluster[j][0];
+                for (int l = 1; l < D; l++) {
+                    PointsFile << "," << local_cluster[j][l];
+                }
+                PointsFile << endl;
             }
-            PointsFile << endl;
+            PointsFile.close();
         }
-        PointsFile.close();
     }
 
     free(velocities[0]);
