@@ -187,20 +187,26 @@ uint8_t* alltoallv(uint8_t* buf_send, int* counts_send,
     return buf_recv;
 }
 
+double* get_mean(int size, double** points, int D) {
+
+    double* mean = (double*)malloc(D * sizeof(double));
+    memset(mean, 0, D * sizeof(double));
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < D; j++) {
+            mean[j] += points[i][j];
+        }
+    }
+    for (int i = 0; i < D; i++) {
+        mean[i] /= size;
+    }
+    return mean;
+}
+
 void re_localize(int local_cluster_size, double** local_cluster,
                  double** velocities, int k, int D, int* new_size,
                  double*** local_cluster_out, double*** velocities_out) {
     // recalculate the mean of the local cluster
-    double* mean = (double*)malloc(D * sizeof(double));
-    memset(mean, 0, D * sizeof(double));
-    for (int i = 0; i < local_cluster_size; i++) {
-        for (int j = 0; j < D; j++) {
-            mean[j] += local_cluster[i][j];
-        }
-    }
-    for (int i = 0; i < D; i++) {
-        mean[i] /= local_cluster_size;
-    }
+    double* mean = get_mean(local_cluster_size, local_cluster, D);
 
     double** means = init_points(k, D);
     assert(MPI_SUCCESS == MPI_Allgather(mean, D, MPI_DOUBLE, means[0], D,
@@ -843,7 +849,50 @@ void simulate(int local_cluster_size, double** local_cluster,
     free(closest_points);
 }
 
-double get_variance() {}
+double get_variance(int size, double** points, int D, int k, int rank) {
+    // calculate mean
+    double* mean = get_mean(size, points, D);
+    double** means;
+    int* sizes;
+    if (rank == ROOT) {
+        sizes = (int*)malloc(k * sizeof(int));
+        means = init_points(k, D);
+    }
+    assert(MPI_SUCCESS == MPI_Gather(mean, D, MPI_DOUBLE, means[0], D,
+                                     MPI_DOUBLE, ROOT, MPI_COMM_WORLD));
+    assert(MPI_SUCCESS == MPI_Gather(&size, 1, MPI_INT, sizes, 1, MPI_INT, ROOT,
+                                     MPI_COMM_WORLD));
+    if (rank == ROOT) {
+        memset(mean, 0, D * sizeof(double));
+        int size = 0;
+        for (int i = 0; i < k; i++) {
+            for (int j = 0; j < D; j++) {
+                mean[j] += means[i][j] * sizes[i];
+            }
+            size += sizes[i];
+        }
+        for (int j = 0; j < D; j++) {
+            mean[j] /= size;
+        }
+    }
+    assert(MPI_SUCCESS == MPI_Bcast(mean, D, MPI_DOUBLE, ROOT, MPI_COMM_WORLD));
+    if (rank == ROOT) {
+        free(sizes);
+        free(means[0]);
+        free(means);
+    }
+
+    double variance = 0;
+    for (int i = 0; i < size; i++) {
+        variance += get_distance_sq(points[i], mean, D);
+    }
+
+    free(mean);
+
+    double all_v;
+    assert(MPI_SUCCESS == MPI_Allreduce(&variance, &all_v, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD));
+    return all_v;
+}
 
 int main(int argc, char** argv) {
     argc = 2;

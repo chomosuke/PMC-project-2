@@ -13,11 +13,10 @@ ax.set_ylim([-size, size])
 def get_points(i):
     x = []
     y = []
-    for j in range(6):
+    for j in range(8):
         df = pd.read_csv("data/" + str(i) + "-" + str(j) + ".csv", header=None)
         x.extend(df[0].values.tolist())
         y.extend(df[1].values.tolist())
-    print(len(x))
     return (x, y)
 
 
