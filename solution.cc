@@ -6,6 +6,8 @@
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <time.h>
 
 using namespace std;
 
@@ -479,6 +481,8 @@ bool node_equals(node* n1, node* n2, int D) {
     return n1->mass == n2->mass;
 }
 
+// Function to test encode and decode. Not called but was ran at one point to
+// verify correctness
 void test(node* root, int D) {
     node* c = copy_node(root, D);
     vector<uint8_t> bytes;
@@ -624,7 +628,7 @@ vector<double> get_acc(double* point, node* root, int D) {
         // use this center of mass
         for (int i = 0; i < D; i++) {
             // if too close, don't accelerate
-            if (d < 0.01) {
+            if (d < 0.05) {
                 acc.push_back(0);
             } else {
                 acc.push_back(G * root->mass *
@@ -724,8 +728,6 @@ void simulate(int local_cluster_size, double** local_cluster,
         b1[j] -= expand;
     }
     node* all_root = construct(points, b1, b2, D);
-    // TODO remove
-    test(all_root, D);
 
     double** means = init_points(num_means, D);
     assert(MPI_SUCCESS == MPI_Allgather(all_root->center_of_mass, D, MPI_DOUBLE,
@@ -803,8 +805,6 @@ void simulate(int local_cluster_size, double** local_cluster,
         }
         node* partial = get_partial(all_root, hyperplanes[i], D);
         partials.push_back(partial);
-        // TODO remove
-        test(partial, D);
     }
 
     // Send the partial tree to each node
@@ -861,9 +861,12 @@ double get_variance(int size, double** points, int D, int k, int rank) {
     if (rank == ROOT) {
         sizes = (int*)malloc(k * sizeof(int));
         means = init_points(k, D);
+        assert(MPI_SUCCESS == MPI_Gather(mean, D, MPI_DOUBLE, means[0], D,
+                                         MPI_DOUBLE, ROOT, MPI_COMM_WORLD));
+    } else {
+        assert(MPI_SUCCESS == MPI_Gather(mean, D, MPI_DOUBLE, NULL, D,
+                                         MPI_DOUBLE, ROOT, MPI_COMM_WORLD));
     }
-    assert(MPI_SUCCESS == MPI_Gather(mean, D, MPI_DOUBLE, means[0], D,
-                                     MPI_DOUBLE, ROOT, MPI_COMM_WORLD));
     assert(MPI_SUCCESS == MPI_Gather(&size, 1, MPI_INT, sizes, 1, MPI_INT, ROOT,
                                      MPI_COMM_WORLD));
     if (rank == ROOT) {
@@ -899,15 +902,27 @@ double get_variance(int size, double** points, int D, int k, int rank) {
     return all_v;
 }
 
+// From
+// https://stackoverflow.com/questions/17432502/how-can-i-measure-cpu-time-and-wall-clock-time-on-both-linux-windows
+double get_wall_time() {
+    struct timeval time;
+    if (gettimeofday(&time, NULL)) {
+        //  Handle error
+        return 0;
+    }
+    return (double)time.tv_sec + (double)time.tv_usec * .000001;
+}
+
 int main(int argc, char** argv) {
+    // argc = 2; // TODO debug
     if (argc < 2) {
         fprintf(stderr, "usage: %s [input_file]\n", argv[0]);
         exit(1);
     }
 
     // Read number of points and dimension
-    // FILE* fp = fopen(argv[1], "r");
-    FILE* fp = fopen("input.txt", "r");
+    FILE* fp = fopen(argv[1], "r");
+    // FILE* fp = fopen("input.txt", "r"); // TODO debug
     int N, D; // number of points and dimensions
     fscanf(fp, "%d%d", &N, &D);
 
@@ -956,14 +971,19 @@ int main(int argc, char** argv) {
                 "This program isn't designed for less points than nodes!");
         exit(1);
     }
-    cout << "Generating " << local_N << " points for rank " << rank << " of "
-         << k << "." << endl;
+
+    clock_t t = clock();
+    double w = get_wall_time();
     vector<vector<double>> points;
     // TODO maybe parallelize this
     for (int i = 0; i < local_N; i++) {
         points.push_back(dists[dd(gen)].generate(&un));
     }
+    cout << "Rank: " << rank << " Points: " << local_N
+         << " took: " << clock() - t << " " << get_wall_time() - w << endl;
 
+    t = clock();
+    w = get_wall_time();
     // now we init the center
     // find distances in parallel
     // one process choose center and broadcast
@@ -1027,38 +1047,53 @@ int main(int argc, char** argv) {
                                         next_center_node, MPI_COMM_WORLD));
         centers.push_back(center);
     }
+    cout << "Rank: " << rank << " generate center took: " << clock() - t << " "
+         << get_wall_time() - w << endl;
 
+    t = clock();
+    w = get_wall_time();
     double** means = init_points(centers.size(), D);
     for (int i = 0; i < centers.size(); i++) {
         for (int j = 0; j < D; j++) {
             means[i][j] = centers[i][j];
         }
     }
+    cout << "Rank: " << rank << " k-means took: " << clock() - t << " "
+         << get_wall_time() - w << endl;
 
+    t = clock();
+    w = get_wall_time();
     vector<int> cluster_indices = k_means(means, points, k, D, rank);
     assert(cluster_indices.size() == points.size());
+    cout << "Rank: " << rank << " k-means took: " << clock() - t << " "
+         << get_wall_time() - w << endl;
 
     free(means[0]);
     free(means);
 
+    t = clock();
+    w = get_wall_time();
     int local_cluster_size;
     double** local_cluster = localize_clusters(cluster_indices, points, k, D,
                                                rank, &local_cluster_size);
-
-    cout << rank << " with size " << local_cluster_size << endl;
+    cout << "Rank: " << rank << " localizing took: " << clock() - t << " "
+         << get_wall_time() - w << " with size: " << local_cluster_size << endl;
 
     double** velocities = init_points(local_cluster_size, D);
     memset(velocities[0], 0, local_cluster_size * D * sizeof(double));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    double init_variance =
-        get_variance(local_cluster_size, local_cluster, D, k, rank);
     int i;
     int frame_interval = 1;
+    t = clock();
+    w = get_wall_time();
+    double init_variance =
+        get_variance(local_cluster_size, local_cluster, D, k, rank);
     for (i = 0;; i++) {
         simulate(local_cluster_size, local_cluster, velocities, k, D, rank);
 
-        if (i % frame_interval == 0) {
+        if (false) {
+            // Don't write on spartan. This is only to be animated by matplotlib
+            // to verify correctness
             char fname[20];
             sprintf(fname, "points/data/%d-%d.csv", i / frame_interval, rank);
             ofstream PointsFile(fname);
@@ -1074,12 +1109,13 @@ int main(int argc, char** argv) {
 
         double variance =
             get_variance(local_cluster_size, local_cluster, D, k, rank);
-        if (variance < init_variance / 2 || variance > init_variance * 2) {
+        if (variance < init_variance / 2) {
             break;
         }
-
-        // cout << get_variance(local_cluster_size, local_cluster, D, k, rank)
-        //      << endl;
+        if (variance > init_variance * 2) {
+            cout << "Large variance" << endl;
+            break;
+        }
 
         int new_size = 0;
         double **new_cluster, **new_velocities;
@@ -1093,7 +1129,8 @@ int main(int argc, char** argv) {
         local_cluster_size = new_size;
         velocities = new_velocities;
     }
-    cout << "Iterated: " << i / frame_interval << endl;
+    cout << "Rank: " << rank << " simulation took: " << clock() - t << " "
+         << get_wall_time() - w << " Iterated: " << i / frame_interval << endl;
 
     free(velocities[0]);
     free(velocities);

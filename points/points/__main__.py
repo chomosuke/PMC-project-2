@@ -34,7 +34,7 @@ def animate(i):
 ani = animation.FuncAnimation(fig,
                               animate,
                               repeat=True,
-                              frames=32,
+                              frames=284,
                               interval=50)
 
 plt.show()
