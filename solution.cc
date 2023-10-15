@@ -623,9 +623,13 @@ vector<double> get_acc(double* point, node* root, int D) {
     if (abs(root->b2[0] - root->b1[0]) / d < THETA || root->num_children == 0) {
         // use this center of mass
         for (int i = 0; i < D; i++) {
-            // TODO verify this
-            acc.push_back(G * root->mass *
-                          (root->center_of_mass[i] - point[i]) / d / d / d);
+            // if too close, don't accelerate
+            if (d < 0.01) {
+                acc.push_back(0);
+            } else {
+                acc.push_back(G * root->mass *
+                              (root->center_of_mass[i] - point[i]) / d / d / d);
+            }
         }
     } else {
         for (int i = 0; i < D; i++) {
@@ -884,18 +888,18 @@ double get_variance(int size, double** points, int D, int k, int rank) {
 
     double variance = 0;
     for (int i = 0; i < size; i++) {
-        variance += get_distance_sq(points[i], mean, D);
+        variance += get_distance(points[i], mean, D);
     }
 
     free(mean);
 
     double all_v;
-    assert(MPI_SUCCESS == MPI_Allreduce(&variance, &all_v, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD));
+    assert(MPI_SUCCESS == MPI_Allreduce(&variance, &all_v, 1, MPI_DOUBLE,
+                                        MPI_SUM, MPI_COMM_WORLD));
     return all_v;
 }
 
 int main(int argc, char** argv) {
-    argc = 2;
     if (argc < 2) {
         fprintf(stderr, "usage: %s [input_file]\n", argv[0]);
         exit(1);
@@ -1046,14 +1050,17 @@ int main(int argc, char** argv) {
     double** velocities = init_points(local_cluster_size, D);
     memset(velocities[0], 0, local_cluster_size * D * sizeof(double));
 
-    int iter_count = 0.1 / DT;
-    for (int i = 0; i < iter_count; i++) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    double init_variance =
+        get_variance(local_cluster_size, local_cluster, D, k, rank);
+    int i;
+    int frame_interval = 1;
+    for (i = 0;; i++) {
         simulate(local_cluster_size, local_cluster, velocities, k, D, rank);
 
-        if (i % (iter_count / 100) == 0) {
+        if (i % frame_interval == 0) {
             char fname[20];
-            sprintf(fname, "points/data/%d-%d.csv", i / (iter_count / 100),
-                    rank);
+            sprintf(fname, "points/data/%d-%d.csv", i / frame_interval, rank);
             ofstream PointsFile(fname);
             for (int j = 0; j < local_cluster_size; j++) {
                 PointsFile << local_cluster[j][0];
@@ -1065,20 +1072,28 @@ int main(int argc, char** argv) {
             PointsFile.close();
         }
 
-        if (i < iter_count - 1) {
-            int new_size = 0;
-            double **new_cluster, **new_velocities;
-            re_localize(local_cluster_size, local_cluster, velocities, k, D,
-                        &new_size, &new_cluster, &new_velocities);
-            free(local_cluster[0]);
-            free(local_cluster);
-            free(velocities[0]);
-            free(velocities);
-            local_cluster = new_cluster;
-            local_cluster_size = new_size;
-            velocities = new_velocities;
+        double variance =
+            get_variance(local_cluster_size, local_cluster, D, k, rank);
+        if (variance < init_variance / 2 || variance > init_variance * 2) {
+            break;
         }
+
+        // cout << get_variance(local_cluster_size, local_cluster, D, k, rank)
+        //      << endl;
+
+        int new_size = 0;
+        double **new_cluster, **new_velocities;
+        re_localize(local_cluster_size, local_cluster, velocities, k, D,
+                    &new_size, &new_cluster, &new_velocities);
+        free(local_cluster[0]);
+        free(local_cluster);
+        free(velocities[0]);
+        free(velocities);
+        local_cluster = new_cluster;
+        local_cluster_size = new_size;
+        velocities = new_velocities;
     }
+    cout << "Iterated: " << i / frame_interval << endl;
 
     free(velocities[0]);
     free(velocities);
