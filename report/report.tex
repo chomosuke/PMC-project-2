@@ -1,0 +1,58 @@
+\documentclass{article}
+
+\usepackage{upgreek}
+
+\usepackage{parskip}
+
+\sloppy
+
+\usepackage{amsmath} % actually amsopn
+\makeatletter
+\DeclareRobustCommand{\var}[1]{\begingroup\newmcodes@\mathit{#1}\endgroup}
+\makeatother
+\makeatletter
+\DeclareRobustCommand{\varb}[1]{\begingroup\newmcodes@\mathbf{#1}\endgroup}
+\makeatother
+
+\usepackage{amsfonts}
+
+\usepackage[a4paper, margin=1in]{geometry}
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\DeclarePairedDelimiter\chevrons{\langle}{\rangle}
+
+\usepackage{graphicx}
+\graphicspath{{./}}
+
+\usepackage{color}
+
+\definecolor{hyperref}{rgb}{0, 0, 0.4}
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks=true,
+	urlcolor=hyperref,
+	}
+
+\newcommand{\n}{\ \-}
+
+\usepackage{enumitem}
+
+\begin{document}
+
+\section*{Introduction}
+This report outlines and analyses an implementation of a message passing parallel algorithm for
+k-means++ clustering and the n-body simulation.\n
+
+
+
+
+
+\section*{Methodology}
+
+\section*{Experiments}
+
+\section*{Analysis \& Discussion}
+
+\end{document}
