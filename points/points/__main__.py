@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.animation as animation
 
 fig, ax = plt.subplots()
-size = 4
+size = 50
 ax.set_xlim([-size, size])
 ax.set_ylim([-size, size])
 
@@ -34,7 +34,7 @@ def animate(i):
 ani = animation.FuncAnimation(fig,
                               animate,
                               repeat=True,
-                              frames=284,
+                              frames=43,
                               interval=50)
 
 plt.show()

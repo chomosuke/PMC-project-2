@@ -663,7 +663,7 @@ vector<double> get_acc(double* point, vector<node*> trees, int D) {
     return acc;
 }
 
-#define DT 0.001
+#define DT 0.01
 void simulate(int local_cluster_size, double** local_cluster,
               double** velocities, int k, int D, int rank) {
     // We want to reduce the communication overhead.
@@ -1047,18 +1047,14 @@ int main(int argc, char** argv) {
                                         next_center_node, MPI_COMM_WORLD));
         centers.push_back(center);
     }
-    cout << "Rank: " << rank << " generate center took: " << clock() - t << " "
-         << get_wall_time() - w << endl;
 
-    t = clock();
-    w = get_wall_time();
     double** means = init_points(centers.size(), D);
     for (int i = 0; i < centers.size(); i++) {
         for (int j = 0; j < D; j++) {
             means[i][j] = centers[i][j];
         }
     }
-    cout << "Rank: " << rank << " k-means took: " << clock() - t << " "
+    cout << "Rank: " << rank << " generate center took: " << clock() - t << " "
          << get_wall_time() - w << endl;
 
     t = clock();
