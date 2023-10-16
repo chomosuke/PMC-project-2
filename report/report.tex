@@ -144,10 +144,19 @@ in the perspective on one computing node.
 	\EndFor
 
 	\State $InitVariance \gets \Call{GetVariance}{points}$
-	\State $ClusterIndices \gets \Call{KMeans}{centroids, points}$ \Comment one iteration only,
-	implemented separately in real code but reusing pseudocode here.
-	\State $points \gets$ points in $NodeIndex^{th}$ cluster as indicated by $ClusterIndices$ in all
-	nodes
+	\While{$True$}
+		\State $\Call{Simulate}{points, velocities}$
+
+		\State $CurrentVariance \gets \Call{GetVariance}{points}$
+		\If{$Currentvariance < InitVariance / 2$}
+			\State \textbf{break while loop}
+		\EndIf
+
+		\State $ClusterIndices \gets \Call{KMeans}{centroids, points}$ \Comment one iteration only,
+		implemented separately in real code but reusing pseudocode here.
+		\State $points \gets$ points in $NodeIndex^{th}$ cluster as indicated by $ClusterIndices$ in
+		all nodes
+	\EndWhile
 \end{algorithmic}
 \end{algorithm}
 
