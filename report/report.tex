@@ -109,7 +109,7 @@ in the perspective on one computing node.
 		\State $prob[i] \gets$ the probability of the $i^{th}$ GMM component
 		\State $gmmc[i] \gets$ the $i^{th}$ GMM component
 	\EndFor
-	\For{$i \gets 1$ \textbf{to} $N / k$}
+	\For{$i \gets 1$ \textbf{to} $N / m$}
 		\State $points[i] \gets
 		\Call{Sample}{gmmc[\Call{SampleWeightedDiscreteDistribution}{prob}]}$
 		\State \Comment $\Call{SampleWeightedDiscreteDistribution}{weights}$ generate a random
@@ -142,6 +142,12 @@ in the perspective on one computing node.
 	\For{$i \gets 1$ \textbf{to} $\Call{Len}{points}$}
 		\State $velocities[i] \gets 0$
 	\EndFor
+
+	\State $InitVariance \gets \Call{GetVariance}{points}$
+	\State $ClusterIndices \gets \Call{KMeans}{centroids, points}$ \Comment one iteration only,
+	implemented separately in real code but reusing pseudocode here.
+	\State $points \gets$ points in $NodeIndex^{th}$ cluster as indicated by $ClusterIndices$ in all
+	nodes
 \end{algorithmic}
 \end{algorithm}
 
@@ -167,7 +173,35 @@ in the perspective on one computing node.
 			\EndIf
 			\State $centroids \gets centroids$ from node $1$
 		\EndWhile
-		\Return $ClusterIndices$
+		\State \Return $ClusterIndices$
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+\caption{}
+\begin{algorithmic}[1]
+	\Function{GetVariance}{points}
+		\State $mean \gets$ average of all points
+		\If{$NodeIndex = 1$}
+			\State $sum \gets 0$
+			\State $allSize \gets 0$
+			\For{$i \gets 1$ \textbf{to} $m$}
+				\State $means[i] \gets mean$ from node $i$
+				\State $sizes[i] \gets \Call{Len}{points}$ from node $i$
+				\State $sum \gets sum + means[i] * sizes[i]$
+				\State $allSize \gets allSize + sizes[i]$
+			\EndFor
+			\State $allMean \gets sum / allSize$
+		\EndIf
+		\State $mean \gets allMean$ from node 1
+		\State $variance \gets 0$
+		\For{$i \gets 1$ \textbf{to} $\Call{Len}{points}$}
+			\State $variance \gets variance + \Call{Distance}{points[i], mean}$
+		\EndFor
+		\State $allVariance \gets$ sum of all $variance$ from all nodes
+		\State \Return $allVariance$
 	\EndFunction
 \end{algorithmic}
 \end{algorithm}
