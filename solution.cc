@@ -726,7 +726,7 @@ void simulate(int local_cluster_size, double** local_cluster,
         double expand = (max_diff - cur_diff) / 2;
         b2[j] += expand;
         b1[j] -= expand;
-    }
+    } // make b1 and b2 encapsulate a square area
     node* all_root = construct(points, b1, b2, D);
 
     double** means = init_points(num_means, D);
@@ -1087,6 +1087,11 @@ int main(int argc, char** argv) {
     for (i = 0;; i++) {
         simulate(local_cluster_size, local_cluster, velocities, k, D, rank);
 
+        /*
+         * IMPORTANT:
+         * if you change if(false) to if(true) the program will output some csv
+         * that can be animated with python code in the points/ folder
+         */
         if (false) {
             // Don't write on spartan. This is only to be animated by matplotlib
             // to verify correctness
