@@ -35,9 +35,23 @@
 	urlcolor=hyperref,
 	}
 
+\usepackage[section]{placeins}
+
 \newcommand{\n}{\ \-}
 
 \usepackage{enumitem}
+
+\usepackage[style=ieee]{biblatex}
+\addbibresource{refs.bib}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\MakeRobust{\Call}
+
+\algdef{SE}[SUBALG]{Indent}{EndIndent}{}{\algorithmicend\ }%
+\algtext*{Indent}
+\algtext*{EndIndent}
 
 \begin{document}
 
@@ -49,7 +63,7 @@ to each other to carry out the task required.\\
 The task is described as follows (n denotes the total number of points and m denotes the total
 number of nodes):
 \begin{enumerate}
-	\item n points are sampled by all m nodes from a Gaussian mixture model.
+	\item n points are sampled by all m nodes from a Gaussian mixture model (GMM).
 	\item All nodes collaborate to cluster the points into m clusters using k-means++.
 	\item Each cluster is moved into one single node so that a single node contains all points of a
 		cluster.
@@ -80,17 +94,103 @@ each cluster are closer to their center of mass than any points in other cluster
 any point within cluster A to this hyperplane should be shorter than the distance from point within
 cluster A to any point within cluster B.
 
-The pseudocode describing the algorithm is shown in Algorithm 1.
+The pseudocode describing the algorithm is shown in Algorithm 1. Note that the pseudocode is written
+in the perspective on one computing node.
+\begin{algorithm}
+\caption{}
+\begin{algorithmic}[1]
+	\State $m \gets$ number of compute nodes.
+	\State $NodeIndex \gets$ the index for the compute node.
+	\Comment This is equivalent to MPI\_Comm\_rank but 1 indexed.
+	\State $N \gets$ number of points
+	\State $D \gets$ number of dimensions
+	\State $c \gets$ number of GMM components
+	\For{$i \gets 1$ \textbf{to} $c$}
+		\State $prob[i] \gets$ the probability of the $i^{th}$ GMM component
+		\State $gmmc[i] \gets$ the $i^{th}$ GMM component
+	\EndFor
+	\For{$i \gets 1$ \textbf{to} $N / k$}
+		\State $points[i] \gets
+		\Call{Sample}{gmmc[\Call{SampleWeightedDiscreteDistribution}{prob}]}$
+		\State \Comment $\Call{SampleWeightedDiscreteDistribution}{weights}$ generate a random
+		number between $1$ and the length of $weights$ with the number $i$ having a probability of
+		$weights[i]/\Call{Sum}{weights}$
+	\EndFor
+	\State $centroids[1] \gets \Call{ChooseRandomOne}{points}$  \Comment choose centroid for
+	k-means++
+	\For{$i \gets 2$ \textbf{to} $m$} \Comment choose $m$ centroids for $m$ clusters
+		\For{$j \gets 1$ \textbf{to} $\Call{Len}{points}$}
+			\State $distances[i] \gets$ distance of $points[i]$ to the closest centroid
+		\EndFor{}
+		\State $DistSum \gets$ sum of distances
+		\If{$NodeIndex = 1$}
+			\For{$i \gets 1$ \textbf{to} $m$}
+				\State $AllSum[i] \gets DistSum$ from node $i$
+			\EndFor
+			\State $NextCentroidNode \gets \Call{SampleWeightedDiscreteDistribution}{AllSum}$
+		\EndIf
+		\State $NextCentroidNode \gets NextCentroidNode$ from node 1
+		\If{$NodeIndex = NextCentroidNode$}
+			\State $NextCentroid \gets points[\Call{SampleWeightedDiscreteDistribution}{distances}]$
+		\EndIf
+		\State $centroids[i] \gets NextCentroid$ from node $NextCentroidNode$
+	\EndFor
+	\State $ClusterIndices \gets \Call{KMeans}{centroids, points}$
+	\State $points \gets$ points in $NodeIndex^{th}$ cluster as indicated by $ClusterIndices$ in all
+	nodes \Comment Significant implementation detail of message passing between nodes omitted.
+	
+	\For{$i \gets 1$ \textbf{to} $\Call{Len}{points}$}
+		\State $velocities[i] \gets 0$
+	\EndFor
+\end{algorithmic}
+\end{algorithm}
 
+\begin{algorithm}
+\caption{}
+\begin{algorithmic}[1]
+	\Function{KMeans}{centroids, points}
+		\While{centroids changed since last iteration}
+			\For{$i \gets 1$ \textbf{to} $\Call{Len}{points}$}
+				\State $ClusterIndices[i] \gets$ index of centroid closest to $points$
+			\EndFor
+			\For{$i \gets 1$ \textbf{to} $\Call{Len}{points}$}
+				\State $sums[ClusterIndices[i]] \gets sums[ClusterIndices[i]] + points[i]$
+				\State $counts[ClusterIndices[i]] \gets counts[ClusterIndices[i]] + 1$
+			\EndFor
+			\If{NodeIndex == 1}
+				\For{$i \gets 1$ \textbf{to} $\Call{Len}{centroids}$}
+					\State $allSums \gets$ sum of $sums[i]$ from all nodes
+					\State $allCounts \gets$ sum of $counts[i]$ from all nodes
+					\State $centroids[i] \gets allSums / allCounts$ \Comment Here it is actually
+					each dimension of $allSums$ divided by $allCounts$.
+				\EndFor
+			\EndIf
+			\State $centroids \gets centroids$ from node $1$
+		\EndWhile
+		\Return $ClusterIndices$
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
 
 While in theory, this algorithm should be faster than naively parallelizing Barnes-Hut algorithm by
 transferring all points to a root cluster and calculating one single Barnes-Hut tree to be sent to
-all clusters. In practice, it is possible that all the overhead of calculating \(m\) partial trees
-(again here \(m\) is the total number of computing nodes), encoding them into an array of bytes to
-be sent over to each node and decoding the bytes into a partial tree, plus the extra computing time
-of creating \(m^2\) partial trees, might have outweighed the extra communication overhead of setting
-all points to all nodes. It would be interesting to compare the performance of the current
-implementation against the alternative described above.
+all clusters. In practice, it turns out the algorithm has a number of other overheads.
+
+These overheads include calculating \(m\) partial trees (again here \(m\) is the total number of
+computing nodes), encoding them into an array of bytes to be sent over to each node and decoding the
+bytes into a partial tree, plus the extra computing time of creating \(m^2\) partial trees.
+Furthermore, because each simulation step relies on the assumption of points of each all points in
+each cluster are closer to their center of mass than any points in other clusters being true, the
+clusters have to be recomputed and points that changed clusters sent over the corresponding nodes.
+This adds additional overheads that, when combined with all the other overheads mentioned above,
+might outweigh the benefit of not having to send all points to all nodes.
+
+In the future, it would be interesting to compare the performance of the current implementation
+against the naively parallelized Barnes-Hut algorithm described above.
+
+Due to time constraint, the implementation is also not parallelized within a node. As a result, this
+does not take advantage of the multicore nature of each node. In the future, it'll be interesting to
+see how much extra performance can be extracted via parallelization within each node.
 
 \section*{Methodology}
 
