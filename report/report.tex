@@ -53,7 +53,13 @@
 \algtext*{Indent}
 \algtext*{EndIndent}
 
+\title{Parallel and Multicore Computing Project 2}
+\author{Shuang Li 1044137}
+\date{}
+
 \begin{document}
+
+\maketitle
 
 \section*{Introduction}
 This report outlines and analyses an implementation of a message passing parallel algorithm for
@@ -99,6 +105,9 @@ in the perspective on one computing node.
 \begin{algorithm}
 \caption{}
 \begin{algorithmic}[1]
+	\State $\theta \gets 0.1$
+	\State $DeltaTime \gets 0.01$
+
 	\State $m \gets$ number of compute nodes.
 	\State $NodeIndex \gets$ the index for the compute node.
 	\Comment This is equivalent to MPI\_Comm\_rank but 1 indexed.
@@ -187,7 +196,6 @@ in the perspective on one computing node.
 \end{algorithmic}
 \end{algorithm}
 
-
 \begin{algorithm}
 \caption{}
 \begin{algorithmic}[1]
@@ -215,6 +223,96 @@ in the perspective on one computing node.
 \end{algorithmic}
 \end{algorithm}
 
+\begin{algorithm}
+\caption{}
+\begin{algorithmic}[1]
+	\Function{Simulate}{points, velocities}
+		\State $b1 \gets points[1]$
+		\State $b2 \gets points[1]$
+		\For{$i \gets 2$ \textbf{to} $\Call{Len}{points}$}
+			\For{each dimension}
+				\State $b1[dimension] \gets \Call{Min}{b1[dimension], points[i][dimension]}$
+				\State $b2[dimension] \gets \Call{Max}{b2[dimension], points[i][dimension]}$
+			\EndFor
+		\EndFor
+		\State $MaxDiff \gets 0$
+		\For{each dimension}
+			$MaxDiff \gets \Call{Max}{MaxDiff, b2[dimension] - b1[dimension]}$
+		\EndFor
+		\For{each dimension}
+			\State $CurDiff \gets b2[dimension] - b1[dimension]$
+			\State $Expand \gets (MaxDiff - CurDiff) / 2$
+			\State $b2[dimension] \gets b2[dimension] + Expand$
+			\State $b1[dimension] \gets b1[dimension] - Expand$
+		\EndFor \Comment Now $b1$ and $b2$ encapsulate a hypercube where all $points$ are in it.
+		\State $BHTree \gets \Call{BarnesHutTree}{points}$
+		\For{$i \gets 1$ \textbf{to} $m$}
+			\State $means[i] \gets centerOfMass$ from $BarnesHutTree$ of node $i$
+			\State $ClosestPoints[i] \gets$ points with the shortest distance to $means[i]$
+		\EndFor
+		\For{$i \gets 1$ \textbf{to} $m$}
+			\State $hyperplanes[i] \gets$ hyperplane that go through $ClosestPoints[i]$ which is
+			perpendicular to the line through $ClosestPoints[i]$ and $centerOfMass$ of local cluster
+		\EndFor
+		\For{$i \gets 1$ \textbf{to} $m$}
+			\State $PartialTrees[i] \gets \Call{GetPartialTree}{hyperplane[i], BHTree}$
+		\EndFor
+		\For{$i \gets 1$ \textbf{to} $m$}
+			\If{$i \ne NodeIndex$}
+				\State $BHTrees[i]$ $PartialTrees[NodeIndex]$ from node $i$
+			\EndIf
+		\EndFor
+		\State $BHTrees[NodeIndex] \gets BHTree$
+		\For{$i \gets 1$ \textbf{to} $\Call{Len}{points}$}
+			\State $acceleration \gets 0$
+			\For{$j \gets 1$ \textbf{to} $\Call{Len}{BHTrees}$}
+				\State $acceleration \gets acceleration + \Call{GetAcceleration}{points[i],
+				BHTrees[j]}$
+			\EndFor
+			\State $velocities[i] \gets velocities[i] + acceleration * DeltaTime$
+			\State $points[i] \gets points[i] + velocities[i] * DeltaTime$
+		\EndFor
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{}
+\begin{algorithmic}[1]
+	\Function{BarnesHutTree}{BHTree, points}
+		
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{}
+\begin{algorithmic}[1]
+	\Function{GetPartialTree}{hyperplane, BHTree}
+		
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{}
+\begin{algorithmic}[1]
+	\Function{GetAcceleration}{point, BHTreeNode}
+		\State $acceleration \gets 0$
+		\If{$\frac{\Call{B1}{BHTreeNode} - \Call{B2}{BHTreeNode}}{\Call{Distance}{point,
+		\Call{CenterOfMass}{BHTreeNode}}} < \theta \lor \Call{NumChildren}{BHTreeNode} = 0$}
+			\State $acceleration \gets \Call{AccelerationFromCOM}{point,
+			\Call{CenterOfMass}{BHTreeNode}, \Call{Mass}{BHTreeNode}}$
+		\Else
+			\For{$child \gets $ each child of $BHTreeNode$}
+				\State $acceleration \gets acceleration + \Call{GetAcceleration}{point, child}$
+			\EndFor
+		\EndIf
+		\State \Return $acceleration$
+	\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
 While in theory, this algorithm should be faster than naively parallelizing Barnes-Hut algorithm by
 transferring all points to a root cluster and calculating one single Barnes-Hut tree to be sent to
 all clusters. In practice, it turns out the algorithm has a number of other overheads.
@@ -236,7 +334,6 @@ does not take advantage of the multicore nature of each node. In the future, it'
 see how much extra performance can be extracted via parallelization within each node.
 
 \section*{Methodology}
-
 
 \section*{Experiments}
 
