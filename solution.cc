@@ -569,12 +569,14 @@ node* construct(vector<double*>& points, vector<double>& b1, vector<double>& b2,
         root->mass = 0;
         for (int i = 0; i < root->num_children; i++) {
             for (int j = 0; j < D; j++) {
-                root->center_of_mass[j] += root->children[i]->center_of_mass[j];
+                root->center_of_mass[j] +=
+                    root->children[i]->center_of_mass[j] *
+                    root->children[i]->mass;
             }
             root->mass += root->children[i]->mass;
         }
         for (int j = 0; j < D; j++) {
-            root->center_of_mass[j] /= root->num_children;
+            root->center_of_mass[j] /= root->mass;
         }
     }
     return root;
