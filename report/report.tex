@@ -100,8 +100,9 @@ each cluster are closer to their center of mass than any points in other cluster
 any point within cluster A to this hyperplane should be shorter than the distance from point within
 cluster A to any point within cluster B.
 
-The pseudocode describing the algorithm is shown in Algorithm 1. Note that the pseudocode is written
-in the perspective on one computing node.
+The pseudocode describing the algorithm is shown in Algorithm 1, with the function that it calls
+shown in Algorithm 2 to 7. Note that the pseudocode is written in the perspective on one computing
+node.
 \begin{algorithm}
 \caption{}
 \begin{algorithmic}[1]
@@ -311,8 +312,10 @@ in the perspective on one computing node.
 				\State $\Call{CenterOfMass}{BHTreeNode} \gets \frac{\Call{CenterOfMass}{BHTreeNode}}
 				{\Call{Mass}{BHTreeNode}}$
 			\EndFor
-			\State \Return $BHTreeNode$
 		\EndIf
+		\State $\Call{B1}{BHTreeNode} \gets b1$
+		\State $\Call{B2}{BHTreeNode} \gets b2$
+		\State \Return $BHTreeNode$
 	\EndFunction
 \end{algorithmic}
 \end{algorithm}
@@ -320,8 +323,23 @@ in the perspective on one computing node.
 \begin{algorithm}
 \caption{}
 \begin{algorithmic}[1]
-	\Function{GetPartialTree}{hyperplane, BHTree}
-		
+	\Function{GetPartialTree}{hyperplane, BHTreeNode}
+		\State $\Call{CenterOfMass}{PartialNode} \gets \Call{CenterOfMass}{BHTreeNode}$
+		\State $\Call{Mass}{PartialNode} \gets \Call{Mass}{BHTreeNode}$
+		\State $\Call{B1}{PartialNode} \gets \Call{B1}{BHTreeNode}$
+		\State $\Call{B2}{PartialNode} \gets \Call{B2}{BHTreeNode}$
+		\If{$\frac{\Call{B1}{BHTreeNode} - \Call{B2}{BHTreeNode}}{\Call{Distance}{hyperplane,
+		\Call{CenterOfMass}{BHTreeNode}}} < \theta$}
+			\State $\Call{NumChildren}{PartialNode} \gets 0$
+		\Else
+			\State $\Call{NumChildren}{PartialNode} \gets \Call{NumChildren}{BHTreeNode}$
+			\State $\Call{Children}{PartialNode} \gets$ empty array
+			\For{$child \gets$ each $\Call{Children}{BHTreeNode}$}
+				\State $\Call{PushBack}{\Call{Children}{PartialNode},
+				\Call{GetPartialTree}{hyperplane, child}}$
+			\EndFor
+		\EndIf
+		\State \Return $PartialNode$
 	\EndFunction
 \end{algorithmic}
 \end{algorithm}
