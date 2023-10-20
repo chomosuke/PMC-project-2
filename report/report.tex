@@ -385,6 +385,25 @@ does not take advantage of the multicore nature of each node. In the future, it'
 see how much extra performance can be extracted via parallelization within each node.
 
 \section*{Methodology}
+To measure the performance of the implementation and whether parallelization sped up the simulation
+or not and by how much, the program was run on spartan with 1, 2, 4, 8, 16, 32 and 64 nodes. Because
+the implementation doesn't utilize OpenMP for inner process / inner node parallelization, each node
+only have one core allocated to run the simulation. Furthermore, to investigate how the
+communication overhead between the different nodes effect the overall runtime, the program is also
+run on a single spartan compute node with 1, 2, 4, 8, 16, 32 and 64 threads. This should
+significantly reduce the communication overhead between the Open MPI processes and give us more
+insight to how the extra communication overhead between different spartan compute nodes effect the
+performance of the program.
+
+To allow more fine-grained observation of the program's performance, the runtime measurement is done
+on each process for the following stages of the program:
+\begin{itemize}
+	\item Generating the points (by sampling from the GMM components).
+	\item Choosing centers as needed by the k-means++ algorithm.
+	\item Collaborating to cluster points using k-means algorithm after the centers are chosen.
+	\item Sending points across the nodes so that all points of each cluster are on a single node.
+	\item The N-Body simulation.
+\end{itemize}
 
 \section*{Experiments}
 
