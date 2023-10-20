@@ -245,7 +245,7 @@ in the perspective on one computing node.
 			\State $b2[dimension] \gets b2[dimension] + Expand$
 			\State $b1[dimension] \gets b1[dimension] - Expand$
 		\EndFor \Comment Now $b1$ and $b2$ encapsulate a hypercube where all $points$ are in it.
-		\State $BHTree \gets \Call{BarnesHutTree}{points}$
+		\State $BHTree \gets \Call{BarnesHutTree}{points, b1, b2}$
 		\For{$i \gets 1$ \textbf{to} $m$}
 			\State $means[i] \gets centerOfMass$ from $BarnesHutTree$ of node $i$
 			\State $ClosestPoints[i] \gets$ points with the shortest distance to $means[i]$
@@ -279,8 +279,40 @@ in the perspective on one computing node.
 \begin{algorithm}
 \caption{}
 \begin{algorithmic}[1]
-	\Function{BarnesHutTree}{BHTree, points}
-		
+	\Function{BarnesHutTree}{points, b1, b2}
+		\If{All $points$ are identical}
+			\State $\Call{NumChildren}{BHTreeNode} \gets 0$
+			\State $\Call{Mass}{BHTreeNode} \gets \Call{Len}{points}$
+			\State $\Call{CenterOfMass}{BHTreeNode} \gets points[1]$
+		\Else
+			\State $\Call{Children}{BHTreeNode} \gets$ empty array
+			\For{$nb1$, $nb2 \gets$ every hyperoctant of the hypercube $b1$, $b2$ represent}
+				\State $npoints \gets$ empty array
+				\For{$point \gets points$}
+					\If{$point$ in hypercube represented by $nb1$, $nb2$}
+						$\Call{PushBack}{npoints, point}$
+					\EndIf
+				\EndFor
+				\If{$\Call{Len}{npoints} > 0$}
+					\State $\Call{PushBack}{\Call{Children}{BHTreeNode},
+					\Call{BarnesHutTree}{npoints, nb1, nb2}}$
+				\EndIf
+				\State $\Call{NumChildren}{BHTreeNode} \gets
+				\Call{Len}{\Call{Children}{BHTreeNode}}$
+				\State $\Call{CenterOfMass}{BHTreeNode} \gets 0$
+				\State $\Call{Mass}{BHTreeNode} \gets 0$
+				\For{$child \gets$ each $\Call{Children}{BHTreeNode}$}
+					\State $ChildMass \gets \Call{CenterOfMass}{child} * \Call{Mass}{child}$
+					\State $\Call{CenterOfMass}{BHTreeNode} \gets \Call{CenterOfMass}{BHTreeNode} +
+					ChildMass$
+					\State $\Call{Mass}{BHTreeNode} \gets \Call{Mass}{BHTreeNode} +
+					\Call{Mass}{child}$
+				\EndFor
+				\State $\Call{CenterOfMass}{BHTreeNode} \gets \frac{\Call{CenterOfMass}{BHTreeNode}}
+				{\Call{Mass}{BHTreeNode}}$
+			\EndFor
+			\State \Return $BHTreeNode$
+		\EndIf
 	\EndFunction
 \end{algorithmic}
 \end{algorithm}
@@ -301,10 +333,11 @@ in the perspective on one computing node.
 		\State $acceleration \gets 0$
 		\If{$\frac{\Call{B1}{BHTreeNode} - \Call{B2}{BHTreeNode}}{\Call{Distance}{point,
 		\Call{CenterOfMass}{BHTreeNode}}} < \theta \lor \Call{NumChildren}{BHTreeNode} = 0$}
-			\State $acceleration \gets \Call{AccelerationFromCOM}{point,
-			\Call{CenterOfMass}{BHTreeNode}, \Call{Mass}{BHTreeNode}}$
+			\State $com \gets \Call{CenterOfMass}{BHTreeNode}$
+			\State $acceleration \gets \Call{AccelerationFromCOM}{point, com,
+			\Call{Mass}{BHTreeNode}}$
 		\Else
-			\For{$child \gets $ each child of $BHTreeNode$}
+			\For{$child \gets$ every $\Call{Children}{BHTreeNode}$}
 				\State $acceleration \gets acceleration + \Call{GetAcceleration}{point, child}$
 			\EndFor
 		\EndIf
