@@ -1,0 +1,323 @@
+rm solution debug -f
+mpicxx -O3 solution.cc -o solution -std=c++20
+64 cores
+Rank: 23 Points: 156 took: 97 9.5129e-05
+Rank: 28 Points: 156 took: 84 0.000103951
+Rank: 22 Points: 156 took: 85 8.51154e-05
+Rank: 2 Points: 157 took: 70 7.00951e-05
+Rank: 47 Points: 156 took: 81 7.89165e-05
+Rank: 12 Points: 157 took: 77 7.48634e-05
+Rank: 21 Points: 156 took: 84 8.29697e-05
+Rank: 9 Points: 157 took: 71 6.8903e-05
+Rank: 32 Points: 156 took: 67 6.98566e-05
+Rank: 24 Points: 156 took: 69 6.91414e-05
+Rank: 59 Points: 156 took: 65 6.38962e-05
+Rank: 6 Points: 157 took: 63 6.19888e-05
+Rank: 62 Points: 156 took: 68 7.51019e-05
+Rank: 27 Points: 156 took: 74 7.29561e-05
+Rank: 15 Points: 157 took: 75 7.29561e-05
+Rank: 43 Points: 156 took: 77 7.58171e-05
+Rank: 55 Points: 156 took: 66 6.60419e-05
+Rank: 39 Points: 156 took: 71 6.8903e-05
+Rank: 35 Points: 156 took: 71 7.00951e-05
+Rank: 7 Points: 157 took: 70 6.91414e-05
+Rank: 45 Points: 156 took: 70 6.8903e-05
+Rank: 61 Points: 156 took: 69 6.91414e-05
+Rank: 41 Points: 156 took: 67 6.60419e-05
+Rank: 8 Points: 157 took: 68 6.79493e-05
+Rank: 5 Points: 157 took: 66 6.48499e-05
+Rank: 37 Points: 156 took: 68 6.69956e-05
+Rank: 29 Points: 156 took: 65 6.41346e-05
+Rank: 10 Points: 157 took: 71 7.08103e-05
+Rank: 20 Points: 156 took: 73 7.20024e-05
+Rank: 17 Points: 156 took: 73 7.31945e-05
+Rank: 11 Points: 157 took: 72 7.10487e-05
+Rank: 31 Points: 156 took: 73 7.29561e-05
+Rank: 25 Points: 156 took: 71 6.98566e-05
+Rank: 14 Points: 157 took: 71 7.00951e-05
+Rank: 56 Points: 156 took: 70 6.8903e-05
+Rank: 58 Points: 156 took: 74 6.91414e-05
+Rank: 63 Points: 156 took: 68 6.69956e-05
+Rank: 52 Points: 156 took: 75 7.39098e-05
+Rank: 51 Points: 156 took: 72 7.20024e-05
+Rank: 44 Points: 156 took: 69 6.79493e-05
+Rank: 57 Points: 156 took: 69 7.20024e-05
+Rank: 33 Points: 156 took: 68 6.79493e-05
+Rank: 16 Points: 156 took: 70 7.58171e-05
+Rank: 30 Points: 156 took: 72 7.20024e-05
+Rank: 46 Points: 156 took: 76 7.48634e-05
+Rank: 4 Points: 157 took: 73 7.20024e-05
+Rank: 3 Points: 157 took: 81 7.98702e-05
+Rank: 49 Points: 156 took: 71 7.00951e-05
+Rank: 48 Points: 156 took: 72 7.08103e-05
+Rank: 18 Points: 156 took: 71 7.00951e-05
+Rank: 54 Points: 156 took: 68 6.79493e-05
+Rank: 53 Points: 156 took: 68 6.69956e-05
+Rank: 60 Points: 156 took: 65 6.38962e-05
+Rank: 42 Points: 156 took: 68 6.69956e-05
+Rank: 13 Points: 157 took: 76 7.39098e-05
+Rank: 50 Points: 156 took: 70 6.69956e-05
+Rank: 34 Points: 156 took: 75 7.41482e-05
+Rank: 19 Points: 156 took: 80 7.9155e-05
+Rank: 40 Points: 156 took: 70 7.00951e-05
+Rank: 1 Points: 157 took: 70 7.00951e-05
+Rank: 26 Points: 156 took: 76 7.41482e-05
+Rank: 38 Points: 156 took: 67 6.7234e-05
+Rank: 36 Points: 156 took: 78 8.89301e-05
+Rank: 0 Points: 157 took: 73 7.20024e-05
+Rank: 0 generate center took: 2772 0.00280309
+Rank: 1 generate center took: 7377 0.00744414
+Rank: 2 generate center took: 194048 0.203592
+Rank: 3 generate center took: 36414 0.0397789
+Rank: 4 generate center took: 16945 0.0401421
+Rank: 5 generate center took: 87444 0.120229
+Rank: 6 generate center took: 118606 0.165828
+Rank: 7 generate center took: 75139 0.134009
+Rank: 8 generate center took: 90529 0.127161
+Rank: 9 generate center took: 154046 0.18452
+Rank: 10 generate center took: 82073 0.10287
+Rank: 11 generate center took: 78257 0.099766
+Rank: 12 generate center took: 144900 0.185055
+Rank: 13 generate center took: 7035 0.015059
+Rank: 14 generate center took: 83522 0.0941131
+Rank: 15 generate center took: 139120 0.156538
+Rank: 16 generate center took: 51973 0.057302
+Rank: 17 generate center took: 52992 0.0997701
+Rank: 18 generate center took: 13756 0.022332
+Rank: 19 generate center took: 8359 0.00844312
+Rank: 20 generate center took: 101864 0.102613
+Rank: 21 generate center took: 117133 0.184693
+Rank: 22 generate center took: 208906 0.210489
+Rank: 23 generate center took: 209290 0.210853
+Rank: 24 generate center took: 167707 0.173818
+Rank: 25 generate center took: 76148 0.097126
+Rank: 26 generate center took: 6369 0.00729299
+Rank: 27 generate center took: 126778 0.159158
+Rank: 28 generate center took: 199138 0.210565
+Rank: 29 generate center took: 76900 0.105031
+Rank: 30 generate center took: 46788 0.0493741
+Rank: 31 generate center took: 66049 0.0991631
+Rank: 32 generate center took: 127655 0.178441
+Rank: 33 generate center took: 55359 0.058135
+Rank: 34 generate center took: 7434 0.010504
+Rank: 35 generate center took: 125747 0.142772
+Rank: 36 generate center took: 3350 0.00338602
+Rank: 37 generate center took: 80509 0.110187
+Rank: 38 generate center took: 4509 0.00454807
+Rank: 39 generate center took: 110468 0.144284
+Rank: 40 generate center took: 5744 0.00812006
+Rank: 41 generate center took: 101313 0.131227
+Rank: 42 generate center took: 10073 0.0158281
+Rank: 43 generate center took: 108366 0.151453
+Rank: 44 generate center took: 9437 0.0636671
+Rank: 45 generate center took: 91999 0.13399
+Rank: 46 generate center took: 46667 0.0470042
+Rank: 47 generate center took: 192000 0.194172
+Rank: 48 generate center took: 14907 0.026608
+Rank: 49 generate center took: 10183 0.0317621
+Rank: 50 generate center took: 7794 0.0130491
+Rank: 51 generate center took: 66868 0.071656
+Rank: 52 generate center took: 61016 0.079464
+Rank: 53 generate center took: 9654 0.0217149
+Rank: 54 generate center took: 14335 0.0221941
+Rank: 55 generate center took: 89119 0.14977
+Rank: 56 generate center took: 57404 0.0939071
+Rank: 57 generate center took: 39157 0.0629451
+Rank: 58 generate center took: 78603 0.0858641
+Rank: 59 generate center took: 126212 0.169168
+Rank: 60 generate center took: 14536 0.0176561
+Rank: 61 generate center took: 117663 0.133157
+Rank: 62 generate center took: 135982 0.164596
+Rank: 63 generate center took: 47552 0.079917
+Rank: 0 k-means took: 10348 0.010437
+Rank: 1 k-means took: 10353 0.0104349
+Rank: 2 k-means took: 10361 0.0104289
+Rank: 3 k-means took: 10365 0.010432
+Rank: 4 k-means took: 10345 0.010428
+Rank: 5 k-means took: 10348 0.010432
+Rank: 6 k-means took: 10343 0.010421
+Rank: 7 k-means took: 10348 0.010426
+Rank: 8 k-means took: 10333 0.0104208
+Rank: 9 k-means took: 10347 0.010426
+Rank: 10 k-means took: 10368 0.0104198
+Rank: 11 k-means took: 10361 0.0104299
+Rank: 12 k-means took: 10349 0.0104239
+Rank: 13 k-means took: 10359 0.010433
+Rank: 14 k-means took: 10354 0.0104299
+Rank: 15 k-means took: 10349 0.0104299
+Rank: 16 k-means took: 10335 0.0104189
+Rank: 17 k-means took: 10355 0.0104349
+Rank: 18 k-means took: 10344 0.010421
+Rank: 19 k-means took: 10364 0.010438
+Rank: 20 k-means took: 10342 0.0104258
+Rank: 21 k-means took: 10350 0.010432
+Rank: 22 k-means took: 10322 0.0104249
+Rank: 23 k-means took: 10346 0.010427
+Rank: 24 k-means took: 10345 0.010427
+Rank: 25 k-means took: 10353 0.010432
+Rank: 26 k-means took: 10362 0.0104289
+Rank: 27 k-means took: 10354 0.010426
+Rank: 28 k-means took: 9910 0.0104198
+Rank: 29 k-means took: 10358 0.0104311
+Rank: 30 k-means took: 10371 0.010433
+Rank: 31 k-means took: 10348 0.0104229
+Rank: 32 k-means took: 10336 0.0104201
+Rank: 33 k-means took: 10362 0.010432
+Rank: 34 k-means took: 10374 0.0104349
+Rank: 35 k-means took: 10347 0.010426
+Rank: 36 k-means took: 10330 0.0104179
+Rank: 37 k-means took: 10345 0.0104249
+Rank: 38 k-means took: 10369 0.0104389
+Rank: 39 k-means took: 10339 0.010427
+Rank: 40 k-means took: 10346 0.010421
+Rank: 41 k-means took: 10362 0.0104339
+Rank: 42 k-means took: 10338 0.0104239
+Rank: 43 k-means took: 10351 0.010428
+Rank: 44 k-means took: 10338 0.0104189
+Rank: 45 k-means took: 10358 0.0104249
+Rank: 46 k-means took: 8752 0.0088048
+Rank: 47 k-means took: 10354 0.010427
+Rank: 48 k-means took: 10341 0.0104229
+Rank: 49 k-means took: 10340 0.0104332
+Rank: 50 k-means took: 10344 0.0104229
+Rank: 51 k-means took: 10354 0.0104208
+Rank: 52 k-means took: 10367 0.0104349
+Rank: 53 k-means took: 9688 0.0104311
+Rank: 54 k-means took: 10350 0.0104239
+Rank: 55 k-means took: 10340 0.0104229
+Rank: 56 k-means took: 10356 0.010433
+Rank: 57 k-means took: 10342 0.0104201
+Rank: 58 k-means took: 10361 0.0104351
+Rank: 59 k-means took: 10358 0.0104251
+Rank: 60 k-means took: 10335 0.010421
+Rank: 61 k-means took: 10365 0.010433
+Rank: 62 k-means took: 10346 0.010422
+Rank: 63 k-means took: 10328 0.0104201
+Rank: 2 localizing took: 2273 0.00228596 with size: 217
+Rank: 3 localizing took: 2274 0.00229096 with size: 150
+Rank: 7 localizing took: 2351 0.00236893 with size: 121
+Rank: 9 localizing took: 2348 0.00236201 with size: 191
+Rank: 6 localizing took: 2383 0.00239611 with size: 154
+Rank: 12 localizing took: 2388 0.00239921 with size: 155
+Rank: 11 localizing took: 2431 0.0024488 with size: 76
+Rank: 15 localizing took: 2430 0.00244594 with size: 164
+Rank: 17 localizing took: 2425 0.00243998 with size: 267
+Rank: 19 localizing took: 2418 0.00243092 with size: 239
+Rank: 21 localizing took: 2446 0.00246215 with size: 139
+Rank: 0 localizing took: 2433 0.00244594 with size: 136
+Rank: 1 localizing took: 2436 0.00245404 with size: 188
+Rank: 5 localizing took: 2475 0.00248814 with size: 235
+Rank: 8 localizing took: 2451 0.00247717 with size: 224
+Rank: 14 localizing took: 2474 0.00249696 with size: 102
+Rank: 22 localizing took: 2451 0.00246096 with size: 132
+Rank: 23 localizing took: 2493 0.00251007 with size: 99
+Rank: 24 localizing took: 2475 0.00249505 with size: 107
+Rank: 4 localizing took: 2514 0.00253296 with size: 193
+Rank: 10 localizing took: 2498 0.00251818 with size: 192
+Rank: 13 localizing took: 2503 0.00251389 with size: 113
+Rank: 16 localizing took: 2498 0.00251102 with size: 152
+Rank: 18 localizing took: 2555 0.0025661 with size: 226
+Rank: 20 localizing took: 2506 0.00252295 with size: 155
+Rank: 25 localizing took: 2507 0.00252414 with size: 145
+Rank: 26 localizing took: 576 0.00131798 with size: 141
+Rank: 27 localizing took: 3096 0.00311518 with size: 162
+Rank: 28 localizing took: 2998 0.0031271 with size: 101
+Rank: 29 localizing took: 3123 0.00314999 with size: 150
+Rank: 30 localizing took: 3196 0.00321603 with size: 95
+Rank: 31 localizing took: 3177 0.00320101 with size: 246
+Rank: 32 localizing took: 3121 0.00314999 with size: 158
+Rank: 33 localizing took: 3163 0.00318599 with size: 127
+Rank: 34 localizing took: 3168 0.0031898 with size: 139
+Rank: 35 localizing took: 3130 0.00317597 with size: 126
+Rank: 36 localizing took: 3167 0.00318313 with size: 136
+Rank: 37 localizing took: 3154 0.00317311 with size: 236
+Rank: 38 localizing took: 3202 0.00322485 with size: 135
+Rank: 39 localizing took: 3154 0.00317717 with size: 92
+Rank: 40 localizing took: 3201 0.00322008 with size: 153
+Rank: 41 localizing took: 3175 0.00319719 with size: 254
+Rank: 42 localizing took: 3214 0.00324011 with size: 117
+Rank: 43 localizing took: 3141 0.00317597 with size: 167
+Rank: 44 localizing took: 3209 0.00323606 with size: 227
+Rank: 45 localizing took: 3184 0.00320196 with size: 224
+Rank: 46 localizing took: 3182 0.00321388 with size: 96
+Rank: 47 localizing took: 3183 0.00320697 with size: 156
+Rank: 48 localizing took: 3199 0.00322008 with size: 102
+Rank: 49 localizing took: 3168 0.00319695 with size: 174
+Rank: 50 localizing took: 3179 0.00323701 with size: 128
+Rank: 51 localizing took: 3204 0.0032289 with size: 83
+Rank: 52 localizing took: 3186 0.00321412 with size: 209
+Rank: 53 localizing took: 2284 0.00321198 with size: 139
+Rank: 54 localizing took: 3222 0.00324202 with size: 157
+Rank: 55 localizing took: 3191 0.00321007 with size: 175
+Rank: 56 localizing took: 3221 0.00323606 with size: 148
+Rank: 57 localizing took: 3216 0.00324011 with size: 144
+Rank: 58 localizing took: 3208 0.00323486 with size: 136
+Rank: 59 localizing took: 3197 0.00323606 with size: 127
+Rank: 60 localizing took: 3212 0.00323606 with size: 86
+Rank: 61 localizing took: 3215 0.00324011 with size: 133
+Rank: 62 localizing took: 3224 0.00325394 with size: 199
+Rank: 63 localizing took: 3225 0.00324988 with size: 150
+Rank: 0 simulation took: 53302973 53.6982 Iterated: 43
+Rank: 2 simulation took: 53366676 53.6983 Iterated: 43
+Rank: 4 simulation took: 53361958 53.6981 Iterated: 43
+Rank: 5 simulation took: 53358541 53.6981 Iterated: 43
+Rank: 6 simulation took: 53395955 53.6982 Iterated: 43
+Rank: 7 simulation took: 53442182 53.6983 Iterated: 43
+Rank: 8 simulation took: 53390858 53.6981 Iterated: 43
+Rank: 9 simulation took: 53441100 53.6983 Iterated: 43
+Rank: 10 simulation took: 53444434 53.6981 Iterated: 43
+Rank: 11 simulation took: 53479153 53.6982 Iterated: 43
+Rank: 12 simulation took: 53438338 53.6982 Iterated: 43
+Rank: 13 simulation took: 53451271 53.6981 Iterated: 43
+Rank: 14 simulation took: 53449686 53.6981 Iterated: 43
+Rank: 15 simulation took: 53476044 53.6982 Iterated: 43
+Rank: 16 simulation took: 53422550 53.6981 Iterated: 43
+Rank: 17 simulation took: 53435335 53.6982 Iterated: 43
+Rank: 18 simulation took: 53404985 53.6981 Iterated: 43
+Rank: 19 simulation took: 53423144 53.6982 Iterated: 43
+Rank: 20 simulation took: 53397272 53.6981 Iterated: 43
+Rank: 21 simulation took: 53449476 53.6982 Iterated: 43
+Rank: 22 simulation took: 53452977 53.6982 Iterated: 43
+Rank: 23 simulation took: 53481377 53.6981 Iterated: 43
+Rank: 24 simulation took: 53442552 53.6981 Iterated: 43
+Rank: 25 simulation took: 53451899 53.6981 Iterated: 43
+Rank: 26 simulation took: 53451929 53.6975 Iterated: 43
+Rank: 27 simulation took: 53479145 53.6962 Iterated: 43
+Rank: 28 simulation took: 53366737 53.6975 Iterated: 43
+Rank: 29 simulation took: 53452804 53.6975 Iterated: 43
+Rank: 30 simulation took: 53456470 53.6974 Iterated: 43
+Rank: 31 simulation took: 53474041 53.6974 Iterated: 43
+Rank: 32 simulation took: 53439978 53.6975 Iterated: 43
+Rank: 33 simulation took: 53455029 53.6974 Iterated: 43
+Rank: 34 simulation took: 53455428 53.6974 Iterated: 43
+Rank: 35 simulation took: 53482273 53.6974 Iterated: 43
+Rank: 36 simulation took: 53439225 53.6974 Iterated: 43
+Rank: 37 simulation took: 53444308 53.6974 Iterated: 43
+Rank: 38 simulation took: 53454839 53.6974 Iterated: 43
+Rank: 39 simulation took: 53482849 53.6974 Iterated: 43
+Rank: 40 simulation took: 53441625 53.6974 Iterated: 43
+Rank: 41 simulation took: 53443896 53.6974 Iterated: 43
+Rank: 42 simulation took: 53454870 53.6974 Iterated: 43
+Rank: 43 simulation took: 53478129 53.6974 Iterated: 43
+Rank: 44 simulation took: 53438795 53.6974 Iterated: 43
+Rank: 45 simulation took: 53451285 53.6974 Iterated: 43
+Rank: 46 simulation took: 53450358 53.6974 Iterated: 43
+Rank: 47 simulation took: 53480326 53.6974 Iterated: 43
+Rank: 48 simulation took: 53445016 53.6974 Iterated: 43
+Rank: 49 simulation took: 53450790 53.6974 Iterated: 43
+Rank: 50 simulation took: 53453769 53.6974 Iterated: 43
+Rank: 51 simulation took: 53447893 53.6974 Iterated: 43
+Rank: 52 simulation took: 53451965 53.6974 Iterated: 43
+Rank: 53 simulation took: 53452790 53.6974 Iterated: 43
+Rank: 54 simulation took: 53446154 53.6974 Iterated: 43
+Rank: 55 simulation took: 53450975 53.6974 Iterated: 43
+Rank: 56 simulation took: 53455300 53.6974 Iterated: 43
+Rank: 57 simulation took: 53123395 53.6974 Iterated: 43
+Rank: 58 simulation took: 53453732 53.6974 Iterated: 43
+Rank: 59 simulation took: 53458589 53.6974 Iterated: 43
+Rank: 60 simulation took: 53447521 53.6974 Iterated: 43
+Rank: 61 simulation took: 53447451 53.6974 Iterated: 43
+Rank: 62 simulation took: 53456475 53.6974 Iterated: 43
+Rank: 63 simulation took: 53432849 53.6974 Iterated: 43
+Rank: 1 simulation took: 53346296 53.6982 Iterated: 43
+Rank: 3 simulation took: 53412677 53.6983 Iterated: 43

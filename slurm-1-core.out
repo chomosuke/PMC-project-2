@@ -1,0 +1,8 @@
+rm solution debug -f
+mpicxx -O3 solution.cc -o solution -std=c++20
+1 cores
+Rank: 0 Points: 10000 took: 2763 0.0027771
+Rank: 0 generate center took: 9 8.10623e-06
+Rank: 0 k-means took: 223 0.00022912
+Rank: 0 localizing took: 353 0.000354052 with size: 10000
+Rank: 0 simulation took: 580918209 584.358 Iterated: 44

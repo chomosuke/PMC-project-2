@@ -3,7 +3,7 @@
 #SBATCH --job-name=ass2
 #SBATCH --ntasks=16
 #SBATCH --nodes=16
-#SBATCH --time=00:06:00
+#SBATCH --time=00:12:00
 #SBATCH --partition=cascade
 
 module load Clang/13.0.1
