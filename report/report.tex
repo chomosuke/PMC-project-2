@@ -200,7 +200,8 @@ node.
 \begin{algorithm}
 \caption{}
 \begin{algorithmic}[1]
-	\Function{GetVariance}{points}
+	\Function{GetVariance}{points} \Comment should really be named: get sum of distance to overall
+	center of mass
 		\State $mean \gets$ average of all points
 		\If{$NodeIndex = 1$}
 			\State $sum \gets 0$
@@ -404,6 +405,32 @@ on each process for the following stages of the program:
 	\item Sending points across the nodes so that all points of each cluster are on a single node.
 	\item The N-Body simulation.
 \end{itemize}
+
+Originally, the N-Body simulation would stop when the sum of square of the distance between every
+point and the overall center of mass fall below 1/4 of the initial value. However, during the
+experiments, it is observed that sometimes the sum of square distance never goes below 1/4 of the
+initial value. It is believed that there are several reasons of this happening.
+
+First, when two points get too close together, they experience strong gravitation attraction towards
+each other and hence receive large value of acceleration that increases their velocities to a very
+high value. Because the simulation's time is discrete, by the next time step, the points have
+already flew past each other and the gravitational attraction between them are no longer strong
+enough to slow them down. These points fly off away from all the other points in high velocity and
+the square of their distance to the overall center of mass dominate the sum of square distance. This
+problem has been fixed in two ways. First, by not having the point exert any gravitational forces
+upon each other when they're less than \(0.05\) distance away. This is a physically justifiable
+approximation because during the very short time period when two points fly through each other in
+proximity, the total acceleration through that short period of time add up to be zero, as they act
+in opposite direction for equal amount of time. Second, by using sum of distance and the threshold
+being \(1/2\) of the initial value instead of sum of square distance. This reduces the influence of
+points very far away from the overall center of mass have on the sum.
+
+Second, if the points are too close to each other at the start, they quickly fly past each other and
+the sum of distances increase after a short decrease. This is because our model has no mechanism for
+energy lost. As a result, after the points get close enough to each other, a significant portion of
+the points will gain enough energy from other points and get ejected from the center and fly away
+forever. This is solved by having the points further away from each other at the start so that the
+sum of distance will dip below \(1/2\) of the initial value before any points get ejected.
 
 \section*{Experiments}
 
