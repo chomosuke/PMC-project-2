@@ -434,15 +434,20 @@ sum of distance will dip below \(1/2\) of the initial value before any points ge
 
 The parameter that is chosen for the experiments are:
 \begin{itemize}
-	\item 10000 points
-	\item 4 dimensions
+	\item 10000 points.
+	\item 4 dimensions.
 	\item 4 Gaussian Mixture model components with probability of 0.25 each and standard deviation
 		of 10 with (10, 10, 10, 10), (10, 0, 10, 0), (0, 0, 0, 0) and (0, 10, 0, 10) as means.
+	\item \(\theta\) of 0.1.
+	\item \(DeltaTime\) of 0.01
 \end{itemize}
 
 \clearpage
 \section*{Experiments}
 \subsection*{One Node Per Process}
+All figures and table shown in this subsection are from running the implementation with each Open
+MPI process on a separate node.
+
 \begin{figure}[!htb]
 \includegraphics[width=\textwidth]{generate-points.png}
 \caption{Generating the points}
@@ -454,10 +459,8 @@ The parameter that is chosen for the experiments are:
 \label{tab:1}
 \end{table}
 
-Figure \ref{fig:1} and Table \ref{tab:1} above shows the difference between the overall clock time taken
-and the time taken to overall. The original intention of this data is to analyze the time taken by
-the actual path finding algorithm. However, it appears to be dominated by noise.
-
+Figure \ref{fig:1} and table \ref{tab:1} above shows the amount of time taken by each node on
+average to generate a portion of the 10000 points by sampling them from the GMM.
 
 \clearpage
 \begin{figure}[!htb]
@@ -471,6 +474,9 @@ the actual path finding algorithm. However, it appears to be dominated by noise.
 \label{tab:2}
 \end{table}
 
+Figure \ref{fig:2} and table \ref{tab:2} above shows the amount of time taken by each node on
+average to choose the centroids of the clusters with k-means++.
+
 \clearpage
 \begin{figure}[!htb]
 \includegraphics[width=\textwidth]{k-means.png}
@@ -482,6 +488,9 @@ the actual path finding algorithm. However, it appears to be dominated by noise.
 \caption{K-Means}
 \label{tab:3}
 \end{table}
+
+Figure \ref{fig:3} and table \ref{tab:3} above shows the amount of time taken by each node on
+average to cluster all the points using k-means++.
 
 \clearpage
 \begin{figure}[!htb]
@@ -495,6 +504,9 @@ the actual path finding algorithm. However, it appears to be dominated by noise.
 \label{tab:4}
 \end{table}
 
+Figure \ref{fig:4} and table \ref{tab:4} above shows the amount of time taken by each node on
+average to transfer the points so that all points of a cluster are stored by a single node.
+
 \clearpage
 \begin{figure}[!htb]
 \includegraphics[width=\textwidth]{simulation-time.png}
@@ -507,8 +519,15 @@ the actual path finding algorithm. However, it appears to be dominated by noise.
 \label{tab:5}
 \end{table}
 
+Figure \ref{fig:5} and table \ref{tab:5} above shows the amount of time taken by each node on
+average to perform the N-Body simulation until the sum of distance goes below \(1/2\) of the initial
+value. Note that during all runs, the program ran 44 iterations of the simulation before it stopped.
+
 \clearpage
 \subsection*{All Process on One Node}
+All figures and table shown in this subsection are from running the implementation with all Open MPI
+process on a single node but each of them have its own core.
+
 \begin{figure}[!htb]
 \includegraphics[width=\textwidth]{single-node/generate-points.png}
 \caption{Generating the points}
@@ -519,6 +538,9 @@ the actual path finding algorithm. However, it appears to be dominated by noise.
 \caption{Generating the points}
 \label{tab:6}
 \end{table}
+
+Figure \ref{fig:6} and table \ref{tab:6} above shows the amount of time taken by each process on
+average to generate a portion of the 10000 points by sampling them from the GMM.
 
 \clearpage
 \begin{figure}[!htb]
@@ -532,6 +554,9 @@ the actual path finding algorithm. However, it appears to be dominated by noise.
 \label{tab:7}
 \end{table}
 
+Figure \ref{fig:7} and table \ref{tab:7} above shows the amount of time taken by each process on
+average to choose the centroids of the clusters with k-means++.
+
 \clearpage
 \begin{figure}[!htb]
 \includegraphics[width=\textwidth]{single-node/k-means.png}
@@ -543,6 +568,9 @@ the actual path finding algorithm. However, it appears to be dominated by noise.
 \caption{K-Means}
 \label{tab:8}
 \end{table}
+
+Figure \ref{fig:8} and table \ref{tab:8} above shows the amount of time taken by each process on
+average to cluster all the points using k-means++.
 
 \clearpage
 \begin{figure}[!htb]
@@ -556,6 +584,9 @@ the actual path finding algorithm. However, it appears to be dominated by noise.
 \label{tab:9}
 \end{table}
 
+Figure \ref{fig:9} and table \ref{tab:9} above shows the amount of time taken by each process on
+average to transfer the points so that all points of a cluster are stored by a single process.
+
 \clearpage
 \begin{figure}[!htb]
 \includegraphics[width=\textwidth]{single-node/simulation.png}
@@ -567,6 +598,10 @@ the actual path finding algorithm. However, it appears to be dominated by noise.
 \caption{Simulation}
 \label{tab:10}
 \end{table}
+
+Figure \ref{fig:10} and table \ref{tab:10} above shows the amount of time taken by each process on
+average to perform the N-Body simulation until the sum of distance goes below \(1/2\) of the initial
+value. Note that during all runs, the program ran 44 iterations of the simulation before it stopped.
 
 \section*{Analysis \& Discussion}
 
