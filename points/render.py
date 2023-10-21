@@ -7,10 +7,9 @@ import matplotlib.animation as animation
 
 frame = 0
 node = 0
-while exists("data/" + str(frame) + "-" + str(node) + ".csv"):
+while exists("data/" + str(frame) + "-" + str(0) + ".csv"):
     frame += 1
-frame -= 1
-while exists("data/" + str(frame) + "-" + str(node) + ".csv"):
+while exists("data/" + str(0) + "-" + str(node) + ".csv"):
     node += 1
 
 fig, ax = plt.subplots()
@@ -43,7 +42,7 @@ def animate(i):
 ani = animation.FuncAnimation(fig,
                               animate,
                               repeat=True,
-                              frames=135,
+                              frames=frame,
                               interval=50)
 
 plt.show()
