@@ -440,7 +440,133 @@ The parameter that is chosen for the experiments are:
 		of 10 with (10, 10, 10, 10), (10, 0, 10, 0), (0, 0, 0, 0) and (0, 10, 0, 10) as means.
 \end{itemize}
 
+\clearpage
 \section*{Experiments}
+\subsection*{One Node Per Process}
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{generate-points.png}
+\caption{Generating the points}
+\label{fig:1}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{generate-points-table.png}
+\caption{Generating the points}
+\label{tab:1}
+\end{table}
+
+Figure \ref{fig:1} and Table \ref{tab:1} above shows the difference between the overall clock time taken
+and the time taken to overall. The original intention of this data is to analyze the time taken by
+the actual path finding algorithm. However, it appears to be dominated by noise.
+
+
+\clearpage
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{choose-centroids.png}
+\caption{Choosing Centroids for k-means++}
+\label{fig:2}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{choose-centroids-table.png}
+\caption{Choosing Centroids for k-means++}
+\label{tab:2}
+\end{table}
+
+\clearpage
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{k-means.png}
+\caption{K-Means}
+\label{fig:3}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{k-means-table.png}
+\caption{K-Means}
+\label{tab:3}
+\end{table}
+
+\clearpage
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{move-clusters.png}
+\caption{Transfer clusters}
+\label{fig:4}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{move-clusters-table.png}
+\caption{Transfer clusters}
+\label{tab:4}
+\end{table}
+
+\clearpage
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{simulation-time.png}
+\caption{Simulation}
+\label{fig:5}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{simulation-time-table.png}
+\caption{Simulation}
+\label{tab:5}
+\end{table}
+
+\clearpage
+\subsection*{All Process on One Node}
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{single-node/generate-points.png}
+\caption{Generating the points}
+\label{fig:6}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{single-node/generate-points-table.png}
+\caption{Generating the points}
+\label{tab:6}
+\end{table}
+
+\clearpage
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{single-node/choose-centroids.png}
+\caption{Choosing Centroids for k-means++}
+\label{fig:7}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{single-node/choose-centroids-table.png}
+\caption{Choosing Centroids for k-means++}
+\label{tab:7}
+\end{table}
+
+\clearpage
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{single-node/k-means.png}
+\caption{K-Means}
+\label{fig:8}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{single-node/k-means-table.png}
+\caption{K-Means}
+\label{tab:8}
+\end{table}
+
+\clearpage
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{single-node/move-clusters.png}
+\caption{Transfer clusters}
+\label{fig:9}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{single-node/move-clusters-table.png}
+\caption{Transfer clusters}
+\label{tab:9}
+\end{table}
+
+\clearpage
+\begin{figure}[!htb]
+\includegraphics[width=\textwidth]{single-node/simulation.png}
+\caption{Simulation}
+\label{fig:10}
+\end{figure}
+\begin{table}[!htb]
+\includegraphics[width=\textwidth]{single-node/simulation-table.png}
+\caption{Simulation}
+\label{tab:10}
+\end{table}
 
 \section*{Analysis \& Discussion}
 
