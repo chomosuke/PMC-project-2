@@ -209,7 +209,7 @@ node.
 			\For{$i \gets 1$ \textbf{to} $m$}
 				\State $means[i] \gets mean$ from node $i$
 				\State $sizes[i] \gets \Call{Len}{points}$ from node $i$
-				\State $sum \gets sum + means[i] * sizes[i]$
+				\State $sum \gets sum + means[i] \times sizes[i]$
 				\State $allSize \gets allSize + sizes[i]$
 			\EndFor
 			\State $allMean \gets sum / allSize$
@@ -271,8 +271,8 @@ node.
 				\State $acceleration \gets acceleration + \Call{GetAcceleration}{points[i],
 				BHTrees[j]}$
 			\EndFor
-			\State $velocities[i] \gets velocities[i] + acceleration * DeltaTime$
-			\State $points[i] \gets points[i] + velocities[i] * DeltaTime$
+			\State $velocities[i] \gets velocities[i] + acceleration \times DeltaTime$
+			\State $points[i] \gets points[i] + velocities[i] \times DeltaTime$
 		\EndFor
 	\EndFunction
 \end{algorithmic}
@@ -304,7 +304,7 @@ node.
 				\State $\Call{CenterOfMass}{BHTreeNode} \gets 0$
 				\State $\Call{Mass}{BHTreeNode} \gets 0$
 				\For{$child \gets$ each $\Call{Children}{BHTreeNode}$}
-					\State $ChildMass \gets \Call{CenterOfMass}{child} * \Call{Mass}{child}$
+					\State $ChildMass \gets \Call{CenterOfMass}{child} \times \Call{Mass}{child}$
 					\State $\Call{CenterOfMass}{BHTreeNode} \gets \Call{CenterOfMass}{BHTreeNode} +
 					ChildMass$
 					\State $\Call{Mass}{BHTreeNode} \gets \Call{Mass}{BHTreeNode} +
@@ -604,5 +604,92 @@ average to perform the N-Body simulation until the sum of distance goes below \(
 value. Note that during all runs, the program ran 44 iterations of the simulation before it stopped.
 
 \section*{Analysis \& Discussion}
+As we can see in figure \ref{fig:1}, table \ref{tab:1}, figure \ref{fig:6} and table \ref{tab:6},
+the amount of time it takes for all the points to be sampled from the GMM are roughly inversely
+proportional to the number of processes. This is because the task of generating all points is an
+embarrassingly parallel problem in the sense that there are no dependency or need for communication
+between the tasks of sampling points from GMM components. There are also no differences between the
+time taken when all processes are running on a single node and when all processes are running on
+separate nodes. This is because there are no communication between them hence the effect of changing
+communication speed does not affect their runtime.
+
+As we can see in figure \ref{fig:2}, table \ref{tab:2}, figure \ref{fig:7} and table \ref{tab:7},
+the amount of time it takes to choose all centroids for k-means++ increase proportionally with the
+amount of process. Because the number of centroids that needs to be generated are proportional (in
+fact identical) with the amount of processes, the total amount of time needed to generate all
+centroids are proportional to the square of the number of processes. This is expected because in the
+implementation, before ever new center is chosen, distances from every point to every center is
+recalculated, leading to a time complexity of \(O(n^2)\) for choosing centroids where n is the
+number of clusters. The implementation could be sped up by only recalculating the distance between
+every point and the newly computed centers.
+
+Comparing between the runtime of choosing centroids for one process per node in figure \ref{fig:2}
+and table \ref{tab:2} and on all process on one node in figure \ref{fig:7} and table \ref{tab:7}, we
+can see that having all process run on one node reduces the runtime by roughly 10-fold. This shows
+that the communication time dominates when all processes are running on separate node. This means
+the implementation of choosing centroids might be sped up significantly by doing all the computation
+on a single node.
+
+As we can see in figure \ref{fig:3}, table \ref{tab:3}, figure \ref{fig:8} and table \ref{tab:8},
+the time taken to cluster the points via k-means does not show clear relationships with the number
+of nodes. One of the reasons of this could be that the amount of iteration needed for k-means to
+converse fluctuate as the number of cluster changes. While this explains the fluctuation of the run
+time for both of each process on a separate node and all processes on a single node separately. It
+does not explain the differences between the shape of figure \ref{fig:3} and figure \ref{fig:8}.
+More specifically, it is unclear why 8 clusters takes longer than 16 clusters on one process per
+node but slightly shorter than 16 clusters on all process on one node. The only possible explanation
+for that is noise. Regardless, in both one process per node and all process on one node scenarios,
+the runtime for number of clusters being 2, 8 and 16 are all slightly higher than it would be if
+the runtime is linearly proportional to the number of clusters.
+
+Comparing between the runtime of k-means clustering on one process per node in figure \ref{fig:3}
+and table \ref{tab:3} and on all process on one node in figure \ref{fig:8} and table \ref{tab:8}, we
+can see that they are always within two factors of each other. This shows that the runtime are
+relatively not as dominated by communication overhead as the runtime for choosing centroids.
+
+As we can see in figure \ref{fig:4}, table \ref{tab:4}, figure \ref{fig:9} and table \ref{tab:9},
+the amount of time taken to move all points to their respective clusters are roughly proportional to
+number of clusters. Theoretically, we'd expect the number of points that needs to be transferred to
+another process being \(10000 \times \frac{n-1}{n}\) where n is the number of clusters. This means
+that the amount of data needed to be sent from one process to another should be similar between 32
+clusters and 64 clusters. However, in reality with 64 processes it takes almost double amount of
+time to transfer the points. This means that the amount of time taken to transfer the points is
+dominated by the overhead for each message that needs to be sent and the size of the messages
+doesn't affect the runtime very much. This also mean that the benefit in reduced communication cost
+that comes from computing the partial tree might be insignificant as computing the partial tree only
+reduces the size of the messages needed to be sent to other processes during the simulation and does
+not reduce the number of messages.
+
+Comparing between the runtime of k-means clustering on one process per node in figure \ref{fig:4}
+and table \ref{tab:4} and on all process on one node in figure \ref{fig:9} and table \ref{tab:9}, we
+can see that it takes roughly 200 times longer when each process is on a separate node. This shows
+that the runtime is dominated by communication cost. It also shows that the communication cost is at
+least 200 times higher when the processes are on different nodes.
+
+As we can see in figure \ref{fig:5}, table \ref{tab:5}, figure \ref{fig:10} and table \ref{tab:10},
+ignoring the jump in runtime for when each process is on a separate node between 8 processes and 16
+processes, the runtime of the N-Body simulation is roughly inversely proportional to the number of
+processes. This shows that our parallelization technique is successful in reducing the overall
+runtime. It also shows a practically near optimal parallelization.
+
+The reason for the jump in runtime for when each process is on a separate node between 8 processes
+and 16 processes could be because spartan included some nodes with high communication cost with the
+rest of the node in jobs that require 16 or more nodes. If we look at the runtime for 1 to 8 nodes
+and the runtime for 16 to 64 nodes separately, they're still mostly inversely proportional to the
+number of processes.
+
+We can see a similar jump in runtime for when all processes are on the same node, although it is
+much less significant. This could be because that the processes have to be on different sockets for
+higher number of processes (a spartan node is made up of 4 18 cores sockets) hence increasing the
+communication time between them.
+
+Comparing between the runtime for N-Body simulation on one process per node in figure \ref{fig:5}
+and table \ref{tab:5} and on all processes on the same node in figure \ref{fig:10} and table
+\ref{tab:10}, we can see that they're within a factor of 2 of each other. This shows that the
+runtime of the N-Body simulation is mostly made up of computing cost instead of communication cost.
+
+If we increase the number of processes to a much larger number, the runtime of the N-Body simulation
+should continue to decrease in an inversely proportional manner as the runtime is mostly dominated
+by computing cost instead of communication cost.
 
 \end{document}
