@@ -63,7 +63,7 @@
 
 \section*{Introduction}
 This report outlines and analyses an implementation of a message passing parallel algorithm for
-k-means++ clustering and the n-body simulation.\\
+k-means++ \cite{arthur2007k} clustering and the n-body simulation.\\
 The algorithm is implemented with Open MPI where a number of nodes collaborate and passes messages
 to each other to carry out the task required.\\
 The task is described as follows (n denotes the total number of points and m denotes the total
@@ -80,12 +80,12 @@ number of nodes):
 The implementation for sampling all n points and clustering them with k-means++ are all rather
 naive and straightforward. The interesting part is the n-body gravity simulation.
 
-To reduce the simulation time, the Barnes-Hut simulation approximation algorithm is used so that
-points over a certain distance away are simplified into a single center of mass when calculating the
-force they exert on another point. To reduce the communication overhead, each node constructs a
-Barnes-Hut tree and then prune the tree for each other nodes so that the tree only contains the
-nodes that are actually needed for the calculation of points in each other node. This pruned tree
-will from now on be referred to as the partial tree.
+To reduce the simulation time, the Barnes-Hut simulation \cite{pfalzner1997many} approximation
+algorithm is used so that points over a certain distance away are simplified into a single center of
+mass when calculating the force they exert on another point. To reduce the communication overhead,
+each node constructs a Barnes-Hut tree and then prune the tree for each other nodes so that the tree
+only contains the nodes that are actually needed for the calculation of points in each other node.
+This pruned tree will from now on be referred to as the partial tree.
 
 For node A to construct a partial tree to be sent to node B, we would like to make sure that any
 node of the tree where \(s / d < \theta\) is kept, where \(s\) is the width of the region the node of
@@ -607,11 +607,11 @@ value. Note that during all runs, the program ran 44 iterations of the simulatio
 As we can see in figure \ref{fig:1}, table \ref{tab:1}, figure \ref{fig:6} and table \ref{tab:6},
 the amount of time it takes for all the points to be sampled from the GMM are roughly inversely
 proportional to the number of processes. This is because the task of generating all points is an
-embarrassingly parallel problem in the sense that there are no dependency or need for communication
-between the tasks of sampling points from GMM components. There are also no differences between the
-time taken when all processes are running on a single node and when all processes are running on
-separate nodes. This is because there are no communication between them hence the effect of changing
-communication speed does not affect their runtime.
+embarrassingly parallel \cite{shavit2011art} problem in the sense that there are no dependency or
+need for communication between the tasks of sampling points from GMM components. There are also no
+differences between the time taken when all processes are running on a single node and when all
+processes are running on separate nodes. This is because there are no communication between them
+hence the effect of changing communication speed does not affect their runtime.
 
 As we can see in figure \ref{fig:2}, table \ref{tab:2}, figure \ref{fig:7} and table \ref{tab:7},
 the amount of time it takes to choose all centroids for k-means++ increase proportionally with the
@@ -691,5 +691,7 @@ runtime of the N-Body simulation is mostly made up of computing cost instead of 
 If we increase the number of processes to a much larger number, the runtime of the N-Body simulation
 should continue to decrease in an inversely proportional manner as the runtime is mostly dominated
 by computing cost instead of communication cost.
+
+\printbibliography
 
 \end{document}
