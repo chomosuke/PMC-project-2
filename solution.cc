@@ -1092,7 +1092,8 @@ int main(int argc, char** argv) {
         /*
          * IMPORTANT:
          * if you change if(false) to if(true) the program will output some csv
-         * that can be animated with python code in the points/ folder
+         * that can be animated with python code in the points/ folder by first
+         * running `poetry install` and then `poetry run python render.py`
          */
         if (false) {
             // Don't write on spartan. This is only to be animated by matplotlib

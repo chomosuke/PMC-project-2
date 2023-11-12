@@ -1,4 +1,9 @@
-file_names = ["slurm-1-core.out", "slurm-64-nodes.out"]
+file_names = [
+    "slurm-1-core.out",
+    "slurm-single-node.out",
+    "slurm-single-node-32.out",
+    "slurm-single-node-64.out",
+]
 
 content = []
 for file_name in file_names:
